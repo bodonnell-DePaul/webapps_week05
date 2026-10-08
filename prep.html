@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Week 5 — Pre-class prep - CSC 436</title>
+<link rel="stylesheet" href="../../assets/course.css">
+<link rel="icon" type="image/svg+xml" href="../../assets/course-icon.svg">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header><a class="course-name" href="../../index.html">CSC 436</a>
+<nav aria-label="Course">
+<a href="../../docs/getting-started.html">Start here</a>
+<a href="../../docs/new_syllabus.html">Syllabus</a>
+<a href="../../docs/course-map.html">Course map</a>
+<a href="../../final-project/index.html">Final project</a>
+</nav></header>
+<main id="main">
+<p class="source-link"><a href="prep.md" download>Download Markdown source</a></p>
+<h1 id="week-5--pre-class-prep">Week 5 — Pre-class prep</h1>
+<p><strong>Time: ~50 minutes.</strong> Do this <em>before</em> class. The 180-minute session assumes it.</p>
+<p>The readiness check at the top of class is 5 questions and takes 5 minutes. It is
+participation-graded, not correctness-graded — but Block A starts from the assumption that
+you have read items 6 and 11.</p>
+<hr>
+<h2 id="core-set-50-min--items-1-2-6-8-9-11">Core set (~50 min) — items 1, 2, 6, 8, 9, 11</h2>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>#</th><th>Title</th><th>Publisher</th><th>Type</th><th style="text-align:right">Time</th></tr></thead><tbody><tr><td>1</td><td><a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Caching">HTTP caching</a> — read <em>Types of caches</em> and <em>Heuristic caching</em> closely; skim the rest</td><td>MDN</td><td>Article</td><td style="text-align:right">15 min</td></tr><tr><td>2</td><td><a href="https://web.dev/articles/vitals">Core Web Vitals</a></td><td>web.dev (Google)</td><td>Article</td><td style="text-align:right">5 min</td></tr><tr><td>6</td><td><a href="https://www.cloudflare.com/learning/cdn/what-is-a-cdn/">What is a CDN?</a></td><td>Cloudflare Learning Center</td><td>Article</td><td style="text-align:right">8 min</td></tr><tr><td>8</td><td><a href="https://opentelemetry.io/docs/concepts/signals/">OpenTelemetry Concepts: Signals</a></td><td>OpenTelemetry (CNCF)</td><td>Article</td><td style="text-align:right">5 min</td></tr><tr><td>9</td><td><a href="https://opentelemetry.io/docs/concepts/signals/traces/">Traces and spans</a></td><td>OpenTelemetry</td><td>Article</td><td style="text-align:right">6 min</td></tr><tr><td>11</td><td><a href="https://about.netflix.com/en/news/how-netflix-works-with-isps-around-the-globe-to-deliver-a-great-viewing-experience">How Netflix works with ISPs around the globe</a></td><td>Netflix</td><td>Article</td><td style="text-align:right">6 min</td></tr></tbody></table></div>
+<h2 id="optional-depth--read-these-if-a-topic-is-new-to-you">Optional depth — read these if a topic is new to you</h2>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>#</th><th>Title</th><th>Publisher</th><th>Type</th><th style="text-align:right">Time</th></tr></thead><tbody><tr><td>3</td><td><a href="https://web.dev/articles/lcp">Largest Contentful Paint (LCP)</a></td><td>web.dev</td><td>Article</td><td style="text-align:right">8 min</td></tr><tr><td>4</td><td><a href="https://web.dev/articles/inp">Interaction to Next Paint (INP)</a></td><td>web.dev</td><td>Article</td><td style="text-align:right">8 min</td></tr><tr><td>5</td><td><a href="https://web.dev/articles/cls">Cumulative Layout Shift (CLS)</a></td><td>web.dev</td><td>Article</td><td style="text-align:right">5 min</td></tr><tr><td>7</td><td><a href="https://www.w3.org/WAI/WCAG22/quickref/">How to Meet WCAG 2.2 (Quick Reference)</a></td><td>W3C WAI</td><td>Interactive</td><td style="text-align:right">5 min skim</td></tr><tr><td>10</td><td><a href="https://opentelemetry.io/docs/concepts/context-propagation/">Context propagation</a></td><td>OpenTelemetry</td><td>Article</td><td style="text-align:right">5 min</td></tr></tbody></table></div>
+<blockquote>
+<p><strong>Accessible alternative for item 6:</strong> if Cloudflare&#39;s CDN page does not load,
+use <a href="reference.html#what-a-cdn-does">the course CDN overview</a> and the shared-cache
+discussion in MDN item 1. This replaces item 6 within its eight-minute budget
+and earns the same credit. HTTP 403 from an automated fetch is not proof that
+the page is dead; you do not need to troubleshoot it to finish prep.</p>
+</blockquote>
+<blockquote>
+<p><strong>⚠️ INP replaced FID.</strong> If you have previously learned <strong>First Input Delay</strong>, note that
+it was replaced as a Core Web Vital by <strong>Interaction to Next Paint in March 2024</strong>. Any
+tutorial, course, or AI assistant still teaching FID is out of date. We will cover this
+explicitly in Block C — see <a href="https://web.dev/blog/inp-cwv-launch">the announcement</a>.</p>
+</blockquote>
+<hr>
+<h2 id="what-to-pay-attention-to-while-you-read">What to pay attention to while you read</h2>
+<p><strong>In the CDN article (item 6) and the Netflix article (item 11)</strong>, read for the <em>map</em>,
+not the vocabulary:</p>
+<ol>
+<li>What a <strong>point of presence (PoP)</strong> is, and why a copy 20 ms away beats an origin 150 ms
+away even when the origin is fast.</li>
+<li>Where Netflix physically puts its servers, and <strong>why an ISP would agree</strong> to host them.
+Block A starts from this question.</li>
+<li>What stays centralized (accounts, recommendations, the &quot;play&quot; decision) versus what is
+pushed out to the edge (the video bytes themselves).</li>
+</ol>
+<p><strong>In the MDN caching guide (item 1)</strong>, focus on <em>where</em> copies live — the browser&#39;s private
+cache versus shared caches such as CDNs and proxies — and on one fact you will be asked:
+<code>no-cache</code> does <strong>not</strong> mean &quot;do not cache&quot;. You do not need to memorize directive values;
+Block B shows them in a working React/Node app and keeps a reference table.</p>
+<p><strong>In the CWV article (item 2)</strong>, note that the thresholds are stated at the <strong>75th
+percentile</strong>, not the mean. This is the single most common misreading.</p>
+<p><strong>In the OpenTelemetry articles (8 and 9)</strong>, you only need the vocabulary: <em>signal</em>, <em>span</em>,
+<em>trace</em>, <em>attribute</em>, <em>context propagation</em>. Do not try to learn the SDK before class — you
+will wire it in the homework.</p>
+<hr>
+<h2 id="before-you-arrive">Before you arrive</h2>
+<ul>
+<li><input disabled="" type="checkbox"> <strong>Node 24 LTS</strong> and <code>curl</code> installed and on your PATH. Run <code>node --version</code>.</li>
+<li><input disabled="" type="checkbox"> Check your <strong>HW4 deployment</strong>. If blocked, request the course recovery baseline;
+the local lab runs without public hosting. Do not spend the prep hour repairing cloud infrastructure.</li>
+<li><input disabled="" type="checkbox"> A <strong>CDN account created</strong>. Cloudflare&#39;s free tier is the reference path and takes
+about five minutes to sign up for. Creating the account is the slow part; do it now,
+not in class.</li>
+<li><input disabled="" type="checkbox"> Chrome or Edge installed (the lab runs <code>axe</code> and Lighthouse through it).</li>
+</ul>
+<p>Optional but recommended, because installation is the most common lab delay:</p>
+<ul>
+<li><input disabled="" type="checkbox"> <code>k6</code> — <a href="https://grafana.com/docs/k6/latest/set-up/install-k6/">https://grafana.com/docs/k6/latest/set-up/install-k6/</a></li>
+</ul>
+<hr>
+<h2 id="readiness-check--5-questions">Readiness check — 5 questions</h2>
+<p>Answer before class. Five minutes. Bring your answers; we debrief in the first ten minutes.</p>
+<ol>
+<li><p>What is a CDN, and what is a <strong>PoP</strong>? Why does a nearby copy make a page faster even when
+your origin server is quick?</p>
+</li>
+<li><p>Where does Netflix place its Open Connect servers, and why would an internet service
+provider agree to host them?</p>
+</li>
+<li><p>A response carries <code>Cache-Control: no-cache</code>. May a cache store it? What must it do
+before serving it again?</p>
+</li>
+<li><p>Name the three Core Web Vitals. Which one replaced First Input Delay, and roughly when?</p>
+</li>
+<li><p>In OpenTelemetry, what is a <strong>trace</strong> made of, and what is <strong>context propagation</strong> for?</p>
+</li>
+</ol>
+<hr>
+
+</main>
+<footer>Individual coursework. D2L contains dated deadlines, submissions and private course access.</footer>
+</body>
+</html>

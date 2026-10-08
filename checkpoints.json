@@ -1,0 +1,26 @@
+{
+  "week": "week05",
+  "checkpoints": [
+    {
+      "id": "w05-cp1",
+      "block": "A",
+      "minutes": 10,
+      "mode": "individual",
+      "prompt": "For each request, say where it should be answered (which layer or cache) and whether it is safe to share between users: (1) a 4-second segment of episode 3 in 1080p, requested by 40,000 viewers tonight; (2) CampusPulse's /assets/index-C4c61eeb.js, built by Vite; (3) CampusPulse's /api/status, identical for everyone, changing every few seconds; (4) a streaming app's \"Continue watching\" row for the signed-in viewer."
+    },
+    {
+      "id": "w05-cp2",
+      "block": "B",
+      "minutes": 10,
+      "mode": "individual",
+      "prompt": "Design the cache for two CampusPulse features. For each, name the layer(s), the key, how it is invalidated, and one line of config (header or code): (1) building hours at /api/buildings/hours — same for everyone, edited by staff about once a week, read on every page load; (2) \"My reports\" at /api/me/reports — a signed-in student's own outage reports, updated when they file one."
+    },
+    {
+      "id": "w05-cp3",
+      "block": "C",
+      "minutes": 10,
+      "mode": "individual",
+      "prompt": "Your CampusPulse status page renders in 900 ms but nobody can submit an outage report. Which of these tells you? (1) Lighthouse in CI, scored 98 this morning; (2) an axe run in the pipeline, zero violations; (3) the metric http_requests_total{route=\"/incidents\",status=\"2xx\"}; (4) an uptime check hitting /healthz every 60 s. Then write one SLO for your own CampusPulse: it must name a user-visible action, a threshold, a percentage, a window, and say whether it is request-based or time-based."
+    }
+  ]
+}

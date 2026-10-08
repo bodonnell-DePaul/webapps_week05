@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>React + Node caching, configured end to end - CSC 436</title>
+<link rel="stylesheet" href="../../../../assets/course.css">
+<link rel="icon" type="image/svg+xml" href="../../../../assets/course-icon.svg">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header><a class="course-name" href="../../../../index.html">CSC 436</a>
+<nav aria-label="Course">
+<a href="../../../../docs/getting-started.html">Start here</a>
+<a href="../../../../docs/new_syllabus.html">Syllabus</a>
+<a href="../../../../docs/course-map.html">Course map</a>
+<a href="../../../../final-project/index.html">Final project</a>
+</nav></header>
+<main id="main">
+<p class="source-link"><a href="README.md" download>Download Markdown source</a></p>
+<h1 id="react--node-caching-configured-end-to-end">React + Node caching, configured end to end</h1>
+<p>The worked example from Week 5 Block B, runnable. One Express server serves a
+Vite/React build and a small CampusPulse API, and configures <strong>four caching
+layers</strong> on purpose:</p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Layer</th><th>What it holds here</th><th>How it is configured</th><th>How it is invalidated</th></tr></thead><tbody><tr><td>Browser cache</td><td>hashed JS/CSS, the HTML shell</td><td><code>Cache-Control</code> from <code>express.static</code> and <code>res.set</code></td><td>new filename on every build; shell revalidates</td></tr><tr><td>CDN / edge</td><td>hashed assets, <code>/api/status</code></td><td>the same <code>Cache-Control</code> (<code>public</code>) plus your CDN&#39;s cache rule</td><td>TTL expiry; hashed names never need a purge</td></tr><tr><td>App cache (memory or Redis)</td><td><code>/api/status</code>, <code>/api/incidents</code></td><td>cache-aside in <code>server.mjs</code>, <code>X-Cache: HIT/MISS</code></td><td>TTL plus <code>del</code> on every write</td></tr><tr><td>Database</td><td>the source of truth</td><td><code>fake-db.mjs</code>, deliberately 300 ms per query</td><td>—</td></tr></tbody></table></div>
+<p><code>/api/me</code> is personalized and is marked <code>private, no-store</code>: no shared layer may
+keep it.</p>
+<h2 id="run-it">Run it</h2>
+<p>Node 24 LTS. From this directory:</p>
+<pre><code class="language-bash">npm install
+npm test     # 8 tests: headers, HIT/MISS, coalescing, invalidation, TTL
+npm start    # http://127.0.0.1:3000, in-memory app cache
+</code></pre>
+<p>Watch the app cache work (use <code>curl.exe</code> in PowerShell):</p>
+<pre><code class="language-bash">curl -sS -D - -o /dev/null http://127.0.0.1:3000/api/status   # X-Cache: MISS (~300 ms)
+curl -sS -D - -o /dev/null http://127.0.0.1:3000/api/status   # X-Cache: HIT  (~1 ms)
+</code></pre>
+<p>To try invalidation, start with local practice writes enabled
+(<code>ALLOW_WRITES=1 npm start</code>, or <code>$env:ALLOW_WRITES=&#39;1&#39;; npm start</code> in
+PowerShell), read <code>/api/incidents</code> twice, <code>POST</code> a new incident, then read it
+again: the next read is a <code>MISS</code> containing the new row.</p>
+<pre><code class="language-bash">curl -sS -X POST -H &#39;Content-Type: application/json&#39; \
+  -d &#39;{&quot;title&quot;:&quot;Wi-Fi down in the library&quot;,&quot;service&quot;:&quot;wifi&quot;}&#39; \
+  http://127.0.0.1:3000/api/incidents
+</code></pre>
+<p>Writes are refused unless <code>ALLOW_WRITES=1</code> <strong>and</strong> the server is bound to
+loopback. This is a teaching switch, not authorization.</p>
+<h3 id="with-redis">With Redis</h3>
+<p>Any Redis 7+ works — a local install, a container, or a managed free tier.</p>
+<pre><code class="language-bash">docker run --rm -p 6379:6379 redis:7          # one option
+REDIS_URL=redis://127.0.0.1:6379 npm start    # app cache: redis
+</code></pre>
+<p>The route code does not change: <code>store.mjs</code> exposes the same <code>get</code>, <code>setEx</code> and
+<code>del</code> calls for both stores. The difference matters once you run <strong>more than one
+copy</strong> of the server: with the in-memory store each replica has a private cache
+and a write on one replica cannot invalidate the others; with Redis every replica
+shares one cache and one <code>del</code>.</p>
+<h2 id="use-it-with-your-own-react-app">Use it with your own React app</h2>
+<ol>
+<li>Build with Vite. <code>npm run build</code> already writes fingerprinted files such as
+<code>dist/assets/index-C4c61eeb.js</code>; no configuration is needed. (If you
+overrode <code>entryFileNames</code> to a fixed name such as <code>app.js</code>, as the course&#39;s
+<code>samples/first-web-app/react</code> bridge does, the file is <strong>not</strong> fingerprinted and must not get a
+one-year lifetime.)</li>
+<li>Point this server at the build: <code>DIST_DIR=../my-app/dist npm start</code>. Without
+a <code>dist/index.html</code> it serves the stand-in in <code>demo-dist/</code>.</li>
+<li>In React, let the client reuse data briefly instead of refetching per
+component — for example TanStack Query&#39;s <code>staleTime</code>. That is a fifth,
+in-memory cache in the tab (<code>npm install @tanstack/react-query</code> in the
+React app, not here):</li>
+</ol>
+<pre><code class="language-jsx">// main.jsx — one client for the whole app
+import { QueryClient, QueryClientProvider } from &quot;@tanstack/react-query&quot;;
+const queryClient = new QueryClient();
+createRoot(document.getElementById(&quot;root&quot;)).render(
+  &lt;QueryClientProvider client={queryClient}&gt;&lt;App /&gt;&lt;/QueryClientProvider&gt;,
+);
+
+// StatusBanner.jsx — every component that asks for [&quot;status&quot;] shares one copy
+const { data, isPending } = useQuery({
+  queryKey: [&quot;status&quot;],
+  queryFn: () =&gt; fetch(&quot;/api/status&quot;).then((r) =&gt; r.json()),
+  staleTime: 10_000, // matches the server&#39;s max-age=10
+});
+
+// after a successful POST /api/incidents — invalidate on write, client side
+queryClient.invalidateQueries({ queryKey: [&quot;status&quot;] });
+</code></pre>
+<h2 id="what-this-sample-is-not">What this sample is not</h2>
+<p>It is a single-process teaching server with a fake database. It has no
+authentication (Week 8), no rate limiting, and its CDN behaviour depends on the
+cache rule you configure at your provider. <code>X-Cache</code> here reports the <strong>app</strong>
+cache only; your CDN reports its own status in a vendor header such as
+<code>cf-cache-status</code>.</p>
+
+</main>
+<footer>Individual coursework. D2L contains dated deadlines, submissions and private course access.</footer>
+</body>
+</html>

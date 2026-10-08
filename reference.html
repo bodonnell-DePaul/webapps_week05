@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Week 5 public reference — cache and measurement checklist - CSC 436</title>
+<link rel="stylesheet" href="../../assets/course.css">
+<link rel="icon" type="image/svg+xml" href="../../assets/course-icon.svg">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header><a class="course-name" href="../../index.html">CSC 436</a>
+<nav aria-label="Course">
+<a href="../../docs/getting-started.html">Start here</a>
+<a href="../../docs/new_syllabus.html">Syllabus</a>
+<a href="../../docs/course-map.html">Course map</a>
+<a href="../../final-project/index.html">Final project</a>
+</nav></header>
+<main id="main">
+<p class="source-link"><a href="reference.md" download>Download Markdown source</a></p>
+<h1 id="week-5-public-reference--cache-and-measurement-checklist">Week 5 public reference — cache and measurement checklist</h1>
+<p>Use this lookup alongside the lab and HW5; no extra prep is assigned.
+The current HW5 core is 8–10 hours through reuse. Optional collectors, extra
+devices and extra optimizations are not required before the midterm.</p>
+<h2 id="what-a-cdn-does">What a CDN does</h2>
+<p>A content delivery network places delivery endpoints, often with shared caches,
+in multiple locations. DNS/routing sends a client toward an appropriate edge
+location, called a point of presence (PoP). The <strong>origin</strong> is the service holding
+or producing the original representation; the <strong>edge</strong> may answer on its behalf.</p>
+<p>A fresh cache HIT can avoid an origin request. A MISS goes to the origin, and
+revalidation can contact the origin while reusing an existing response body.
+Different PoPs/variants can have different cache state. A HIT elsewhere does not
+prove this user&#39;s edge has the same entry. Edge TLS may also be separate from
+edge-to-origin TLS; both paths need deliberate configuration.</p>
+<p>A CDN can reduce distance and repeated origin work, but it cannot make slow
+uncached application work disappear, fix an inaccessible form, or infer which
+responses contain private data. A browser cache and a shared edge cache have
+different owners and policies. Read actual response headers and provider rules
+instead of assuming all HTML/JSON is cached by default.</p>
+<h2 id="how-streaming-platforms-deliver-video">How streaming platforms deliver video</h2>
+<p>Streaming services split their system by how cacheable the data is. The
+<strong>control plane</strong> — sign-in, profiles, search, recommendations, &quot;Continue
+watching&quot;, DRM licences, and choosing which servers a player should use — is
+small, personalized, and runs in a cloud region. The <strong>data plane</strong> is the video:
+each title is encoded into a ladder of bitrates, cut into segments of a few
+seconds, and listed in an HLS or DASH manifest. The player fetches segments over
+ordinary HTTP and switches rungs as bandwidth changes (adaptive bitrate). Segments
+are identical for every viewer and never change, so any CDN can cache them.</p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Platform</th><th>Video delivery</th><th>Sources</th></tr></thead><tbody><tr><td>Netflix</td><td>Its own CDN, Open Connect: appliances embedded inside ISP networks and at internet exchanges, filled with predicted-popular titles off-peak</td><td><a href="https://about.netflix.com/en/news/how-netflix-works-with-isps-around-the-globe-to-deliver-a-great-viewing-experience">Netflix and ISPs</a>, <a href="https://openconnect.netflix.com/en/">Open Connect</a></td></tr><tr><td>Disney+</td><td>Several CDN partners, including on-net caches, chosen by an in-house load balancer scored on playback quality</td><td><a href="https://www.streamingmedia.com/Articles/ReadArticle.aspx?ArticleID=145721">Streaming Media</a></td></tr><tr><td>Max</td><td>Four commercial CDNs for resilience</td><td><a href="https://techcrunch.com/2023/05/05/warner-bros-discovery-cto-and-cpo-explain-how-they-made-max-less-buggy/">TechCrunch, 2023</a></td></tr></tbody></table></div>
+<p>The <strong>last mile</strong> is the link from the ISP to the home; nobody caches past it, so
+the closest useful copy sits at its start. Live events cannot be pre-filled, so
+CDNs rely on request collapsing, shield tiers, short manifest TTLs, and long
+segment TTLs.</p>
+<h2 id="caching-layers-in-a-react--node-app">Caching layers in a React + Node app</h2>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Layer</th><th>Best for</th><th>Invalidated by</th></tr></thead><tbody><tr><td>React data cache (TanStack Query, SWR)</td><td>Avoiding refetches while the user navigates</td><td><code>staleTime</code>; <code>invalidateQueries</code> after a write</td></tr><tr><td>Service worker</td><td>Offline and instant repeat visits</td><td>Your own code; a new worker version</td></tr><tr><td>Browser HTTP cache</td><td>Assets across visits</td><td><code>Cache-Control</code> lifetime; a new URL</td></tr><tr><td>CDN / edge</td><td>Public bytes shared across users and cities</td><td>TTL, purge, new URL</td></tr><tr><td>Reverse proxy</td><td>Shielding the app on the same host</td><td>TTL, purge</td></tr><tr><td>App cache (Redis, in-memory)</td><td>Expensive queries and computed results</td><td>Delete on write; TTL</td></tr></tbody></table></div>
+<p>Pick the layer from <strong>who may see the copy</strong>, the lifetime from <strong>how stale is
+acceptable</strong>, and the mechanism from <strong>where you can reach to delete it</strong>. You
+can delete a Redis key and purge a CDN; you cannot reach into a browser cache, so
+long browser lifetimes belong only on content-addressed (hashed) URLs. A complete
+runnable example is
+<a href="samples/react-node-cache/index.html"><code>samples/react-node-cache/</code></a>.</p>
+<h2 id="cache-questions-in-order">Cache questions, in order</h2>
+<ol>
+<li>Is the response eligible for storage at this edge?</li>
+<li>Which method/host/path/query/header inputs select the key or variant?</li>
+<li>Does the edge respect the origin&#39;s directives and privacy requirements?</li>
+<li>What makes the representation fresh, and what validates it when stale?</li>
+<li>How will you invalidate every affected variant safely?</li>
+</ol>
+<p><code>no-cache</code> permits storage but requires validation before reuse. <code>no-store</code>
+prohibits storage. <code>private</code> excludes shared caches. <code>s-maxage</code> addresses shared
+caches and incorporates proxy-revalidation behavior; do not assume arbitrary
+stale extensions override stricter directives. Verify the actual provider.</p>
+<p>An ETag identifies a representation for validation; a 304 carries no response
+body. <code>Age</code> includes age since origin generation/validation, potentially including
+upstream cache residency. The local teaching edge simplifies this to local
+residency and revalidates synchronously.</p>
+<p>A response can change on every origin request yet still be fresh-cacheable.
+Its validator will not save payload after expiration if the bytes always change.
+Keep complete query strings unless a proven-safe transformation is available;
+no paid custom cache key is required.</p>
+<h2 id="stale-while-revalidate-and-stale-if-error">stale-while-revalidate and stale-if-error</h2>
+<p>These extensions answer different questions:</p>
+<ul>
+<li><strong><code>stale-while-revalidate=N</code>:</strong> after freshness expires, permits serving the
+old response within an additional N-second window while revalidation happens
+asynchronously. It can reduce waiting for the caller, at a bounded staleness cost.</li>
+<li><strong><code>stale-if-error=N</code>:</strong> permits serving an old response within its additional
+window when an eligible origin/network error occurs. It is a resilience
+policy, not a promise that every failed request can use arbitrarily old data.</li>
+</ul>
+<p>For example, <code>max-age=10, stale-while-revalidate=30, stale-if-error=60</code> has a
+10-second freshness lifetime. Its stale windows are measured <strong>after</strong> that
+lifetime: SWR through age 40, and SIE through age 70 on an eligible error.
+They are not a 100-second combined TTL. An actual matching stored representation
+must exist first, and stricter applicable revalidation/privacy directives and
+the provider&#39;s behavior must be considered.</p>
+<p>The course&#39;s local edge intentionally revalidates synchronously: it can show
+<code>REVALIDATED</code> and error-driven <code>STALE</code>, but it does <strong>not</strong> implement asynchronous
+SWR/<code>UPDATING</code>. Do not claim a local SIE demonstration proved a real CDN&#39;s SWR
+behavior. State the policy, prime the route, observe its age and response state,
+and distinguish reused bytes from an origin request that was avoided.</p>
+<p>Reference: <a href="https://www.rfc-editor.org/rfc/rfc5861.html">RFC 5861</a> defines these
+extensions; <a href="https://www.rfc-editor.org/rfc/rfc9111.html">RFC 9111</a> supplies the
+surrounding HTTP caching rules.</p>
+<h2 id="reproduce-states-without-external-load">Reproduce states without external load</h2>
+<p>Use the loopback origin/edge pair. To observe stale behavior, <strong>prime the exact
+route while the origin runs</strong>, wait beyond its freshness lifetime, then stop
+the origin. An absent entry cannot become STALE; a fresh one can remain HIT.
+After a deliberate privacy failure, correct both origin and edge policy and
+purge old entries before claiming recovery. Synthetic sessions only.</p>
+<h2 id="measurements-are-not-interchangeable">Measurements are not interchangeable</h2>
+<ul>
+<li>Lighthouse is a repeatable <strong>lab</strong> measurement, not representative field data.</li>
+<li>The six-session RUM pilot is a small convenience sample, not CrUX.
+Interact to generate INP; deduplicate updates before computing a percentile.
+Report cohorts separately if multiple devices/conditions are used.</li>
+<li>The supplied local <code>rum-collector.mjs</code> validates/deduplicates measurements and
+provides results without a cloud account. HW5 explains the development proxy.</li>
+<li>The fixed k6 workload runs only on your authorized staging or loopback target.
+Keep its stages/request mix unchanged; a performance threshold failure is
+evidence to analyze, not permission to lower the workload silently.</li>
+<li>A successful automated accessibility scan is not a successful keyboard journey.
+Test visible focus, labels, operation and validation/error states.</li>
+</ul>
+<h2 id="a-small-observable-system-is-enough-to-begin">A small observable system is enough to begin</h2>
+<p>Correlate a response&#39;s request id with its structured backend log. Derive request
+count, latency and an SLI table from existing/course telemetry. Origin logs and
+spans cannot report cache HIT requests that never reached the origin; collect
+edge/client response evidence separately.</p>
+<p>A request-based error budget counts bad requests. A time-based budget counts
+bad intervals. State which one you mean before converting percentages into
+minutes. An alert&#39;s configuration is not proof of delivery: trigger it safely,
+retain the received notification, restore the setting, and verify recovery.</p>
+<p>Use the <a href="../../docs/non-ai-review-artifacts.html#hw5---edge-policy-draft">HW5 supplied edge-policy draft</a>
+instead of requiring an AI service. Your evidence and interpretation remain
+individual work.</p>
+
+</main>
+<footer>Individual coursework. D2L contains dated deadlines, submissions and private course access.</footer>
+</body>
+</html>

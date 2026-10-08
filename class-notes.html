@@ -1,0 +1,796 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Week 5: Delivery, Caching, and What the User Actually Experiences — class notes - CSC 436</title>
+<link rel="stylesheet" href="../../assets/course.css">
+<link rel="icon" type="image/svg+xml" href="../../assets/course-icon.svg">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header><a class="course-name" href="../../index.html">CSC 436</a>
+<nav aria-label="Course">
+<a href="../../docs/getting-started.html">Start here</a>
+<a href="../../docs/new_syllabus.html">Syllabus</a>
+<a href="../../docs/course-map.html">Course map</a>
+<a href="../../final-project/index.html">Final project</a>
+</nav></header>
+<main id="main">
+<p class="source-link"><a href="class-notes.md" download>Download Markdown source</a></p>
+<h1 id="week-5-delivery-caching-and-what-the-user-actually-experiences--class-notes">Week 5: Delivery, Caching, and What the User Actually Experiences — class notes</h1>
+<p>These notes contain the student-visible teaching material and examples. Complete the exercises individually. Instructor delivery notes and answer keys are not included.</p>
+<h2 id="weekly-session--delivery-caching-and-what-the-user-actually-experiences">Weekly session — Delivery, Caching, and What the User Actually Experiences</h2>
+<p>Review, preparation, logistics, teaching, individual practice, and the end-of-class brief</p>
+<h2 id="short-review">Short review</h2>
+<h3 id="your-hw4-site-lives-in-one-place-your-users-do-not">Your HW4 site lives in one place. Your users do not</h3>
+<h4 id="what-hw4-gave-you">What HW4 gave you</h4>
+<ul>
+<li>Your own domain, live, over <strong>HTTPS</strong></li>
+<li>A pipeline that deploys and can roll back</li>
+<li>A container answering <code>/healthz</code> — in <strong>one</strong> region</li>
+</ul>
+<h4 id="what-today-adds">What today adds</h4>
+<ul>
+<li>A layer of <strong>copies</strong> between your users and that one container</li>
+<li>Those copies live in hundreds of buildings, near people</li>
+<li>Deciding <em>what</em> may be copied is a design job — and a security one</li>
+</ul>
+<h2 id="prelecture-review">Prelecture review</h2>
+<h3 id="prep-debrief-what-the-readings-should-have-left-you-with">Prep debrief: what the readings should have left you with</h3>
+<ul>
+<li><strong>Q1:</strong> a CDN is a fleet of caching servers in many cities; a <strong>PoP</strong> is one of those sites</li>
+<li><strong>Q2:</strong> Netflix&#39;s Open Connect places its own servers <strong>inside ISP networks</strong> — free to the ISP</li>
+<li><strong>Q3 — hands up first:</strong> does <code>no-cache</code> mean &quot;do not cache&quot;? No. It means <em>check before reuse</em></li>
+<li><strong>Q4:</strong> the three Core Web Vitals are LCP, INP, CLS — <strong>INP replaced FID</strong> in March 2024</li>
+</ul>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>The prep gave you vocabulary. Class time gives you the map: where copies live, who
+owns them, and what goes wrong when the wrong thing is copied.</p>
+</blockquote>
+<h2 id="weekly-logistics">Weekly logistics</h2>
+<h3 id="how-today-runs-and-what-you-need-on-hand">How today runs, and what you need on hand</h3>
+<h4 id="the-180-minutes">The 180 minutes</h4>
+<ul>
+<li>Block A (30) → checkpoint (10)</li>
+<li>Block B (30) → checkpoint (10)</li>
+<li><strong>Break (10)</strong> — hard stop</li>
+<li>Block C (25) → checkpoint (10)</li>
+<li>Guided lab (35), then the HW5 brief and exit ticket</li>
+</ul>
+<h4 id="have-ready-right-now">Have ready, right now</h4>
+<ul>
+<li>A browser — the first demo is in about eight minutes</li>
+<li><strong>Node 24</strong> and this week&#39;s <code>samples/</code> for Block B and the lab</li>
+<li>Your <strong>HW4 deployment</strong> and a free CDN account for the homework</li>
+</ul>
+<h2 id="block-a--cdns-and-streaming">Block A — CDNs and streaming</h2>
+<h3 id="two-problems-no-amount-of-server-tuning-fixes">Two problems no amount of server tuning fixes</h3>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>Fix both: <strong>keep copies of popular bytes close to the people asking.</strong> That is a CDN.</p>
+</blockquote>
+<h4 id="distance">Distance</h4>
+<ul>
+<li>Light in fiber: about <strong>200,000 km/s</strong></li>
+<li>Sydney ↔ Virginia: <strong>≥ 160 ms</strong> per round trip</li>
+<li>A page load needs several round trips</li>
+</ul>
+<h4 id="crowds">Crowds</h4>
+<ul>
+<li>8 p.m. premiere: millions press play at once</li>
+<li>One origin has one set of network links</li>
+<li>Repeat requests for the same bytes waste work</li>
+</ul>
+<h3 id="a-cdn-puts-a-copy-one-short-hop-from-each-user">A CDN puts a copy one short hop from each user</h3>
+<p><img src="../../assets/class-notes/week05-session-s6-1.svg" alt="Two panels. Left, without a CDN: users in Sydney, São Paulo, and Frankfurt each send every request to one origin server in Virginia, with round trips of about 160 to 200 milliseconds. Right, with a CDN: each user talks to a nearby point of presence in their own city in about 5 to 15 milliseconds, and only cache misses travel on to the origin in Virginia."></p>
+<p><em>Without a CDN every request crosses the ocean. With one, only cache misses do</em></p>
+<h3 id="how-your-request-finds-the-nearest-pop">How your request finds the nearest PoP</h3>
+<ul>
+<li>A <strong>point of presence (PoP)</strong> is a rack of servers in a building where many networks meet</li>
+<li>Big CDNs run hundreds of PoPs; Cloudflare lists data centers in <strong>330+ cities</strong></li>
+<li><strong>Anycast:</strong> every PoP announces the <em>same</em> IP address; internet routing delivers you to a nearby one</li>
+<li><strong>DNS steering:</strong> the CDN&#39;s DNS answers with the address of a PoP chosen for <em>you</em></li>
+<li>Each PoP has <strong>its own</strong> cache — &quot;it&#39;s cached&quot; is never a global statement</li>
+<li>On a miss, PoPs often ask a regional <strong>shield</strong> cache first, so the origin sees one request, not hundreds</li>
+</ul>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Cloudflare — <a href="https://www.cloudflare.com/network/">Global network</a></li>
+<li>Amazon — <a href="https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/Introduction.html">What is Amazon CloudFront?</a></li>
+</ul>
+<h3 id="demo-which-pop-is-serving-you-right-now">Demo: which PoP is serving you right now?</h3>
+<h4 id="steps">Steps</h4>
+<ol>
+<li>Open <code>https://www.cloudflare.com/cdn-cgi/trace</code> in any browser</li>
+<li>Find the <code>colo=</code> line — an airport code (<code>ORD</code> is Chicago O&#39;Hare)</li>
+<li>Try it on your phone with Wi-Fi <strong>off</strong>, then compare with a neighbor</li>
+</ol>
+<h4 id="expected-observations">Expected observations</h4>
+<ul>
+<li>Laptops on campus Wi-Fi show the same code; a phone on cellular may differ</li>
+<li><code>ip=</code> shows the address the PoP saw; <code>http=</code> shows the HTTP version used</li>
+</ul>
+<h4 id="fallback">Fallback</h4>
+<p>Read the captured trace in the speaker notes aloud and point at <code>colo=</code>.</p>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Cloudflare — <a href="https://www.cloudflare.com/network/">Global network</a></li>
+</ul>
+<h3 id="a-modern-edge-does-far-more-than-store-files">A modern edge does far more than store files</h3>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Edge service</th><th>What it does for you</th><th>Where you meet it</th></tr></thead><tbody><tr><td><strong>Static caching</strong></td><td>Serves JS, CSS, images, video segments from the PoP</td><td>Every CDN</td></tr><tr><td><strong>API micro-caching</strong></td><td>Shares a public JSON answer for a few seconds</td><td>Block B&#39;s <code>/api/status</code></td></tr><tr><td><strong>TLS termination</strong></td><td>Finishes the HTTPS handshake near the user</td><td>HW4&#39;s certificate, now at the edge</td></tr><tr><td><strong>Compression and images</strong></td><td>Brotli/gzip, resizing, modern image formats</td><td>Block B, HW5 Task 4</td></tr><tr><td><strong>Security</strong></td><td>DDoS absorption, WAF rules, bot filtering</td><td>Week 8</td></tr><tr><td><strong>Edge functions</strong></td><td>Small programs that run in the PoP</td><td>Cloudflare Workers, Lambda@Edge</td></tr></tbody></table></div>
+<h3 id="how-streaming-reaches-the-world">How streaming reaches the world</h3>
+<h3 id="two-systems-the-app-you-browse-and-the-pipe-that-plays">Two systems: the app you browse, and the pipe that plays</h3>
+<p><img src="../../assets/class-notes/week05-session-s11-1.svg" alt="Netflix architecture split in two. The control plane, in Amazon Web Services, handles sign-in, browsing, search, recommendations, billing, transcoding, and deciding which server should stream to you. Pressing play hands off to the data plane, Open Connect, whose appliances stream the actual video segments to the device."></p>
+<p><em>Netflix — everything before you press play runs in the cloud; everything after comes from Open Connect</em></p>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Netflix — <a href="https://about.netflix.com/en/news/how-netflix-works-with-isps-around-the-globe-to-deliver-a-great-viewing-experience">How Netflix works with ISPs around the globe</a></li>
+<li>Netflix — <a href="https://openconnect.netflix.com/Open-Connect-Overview.pdf">Open Connect overview (PDF)</a></li>
+</ul>
+<h3 id="a-movie-is-thousands-of-small-cacheable-files">A movie is thousands of small, cacheable files</h3>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>Video becomes ordinary HTTP requests for files that never change.</p>
+</blockquote>
+<h4 id="encode-once-many-ways">Encode once, many ways</h4>
+<ul>
+<li>A <strong>ladder</strong> of versions: 240p up to 4K</li>
+<li>Each cut into <strong>segments</strong> of a few seconds</li>
+<li>A <strong>manifest</strong> (HLS or DASH) lists the URLs</li>
+</ul>
+<h4 id="play-adaptively">Play adaptively</h4>
+<ul>
+<li>Player reads the manifest, then fetches segments</li>
+<li><strong>Adaptive bitrate:</strong> slow network → lower rung</li>
+<li>Segments never change: <strong>static, shareable files</strong></li>
+</ul>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Apple Developer — <a href="https://developer.apple.com/documentation/http-live-streaming">HTTP Live Streaming</a></li>
+</ul>
+<h3 id="netflix-open-connect-the-last-mile-is-the-point">Netflix Open Connect: the &quot;last mile&quot; is the point</h3>
+<p><img src="../../assets/class-notes/week05-session-s13-1.svg" alt="Netflix Open Connect tiers from left to right. Netflix origin storage fills appliances overnight during off-peak hours. Appliances at internet exchange points serve many ISPs. Embedded appliances sit inside an individual ISP"></p>
+<p><em>Open Connect fills appliances off-peak, so the evening rush is served from inside your ISP</em></p>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Netflix — <a href="https://openconnect.netflix.com/en/appliances/">Open Connect appliances</a></li>
+<li>Netflix — <a href="https://openconnect.netflix.com/en/peering/">Open Connect peering</a></li>
+</ul>
+<h3 id="why-netflix-built-its-own-cdn-instead-of-renting-one">Why Netflix built its own CDN instead of renting one</h3>
+<ul>
+<li><strong>Scale:</strong> Open Connect has carried <strong>100%</strong> of Netflix video since it launched (built 2011, announced 2012)</li>
+<li><strong>Placement:</strong> close to <strong>90%</strong> of that traffic flows over direct connections to residential ISPs</li>
+<li><strong>Free boxes:</strong> qualifying ISPs get appliances at no charge — and stop paying to haul Netflix over transit links</li>
+<li><strong>Predictability:</strong> a known catalog can be pushed off-peak; a general CDN can only react to requests</li>
+<li><strong>Specialization:</strong> per-server throughput grew from <strong>8 Gbps</strong> (2012) to <strong>over 90 Gbps</strong> (2016)</li>
+</ul>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>Netflix&#39;s CDN is a partnership with ISPs, not just hardware. Both sides save money,
+and viewers get a stream that starts one hop from home.</p>
+</blockquote>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Netflix — <a href="https://about.netflix.com/en/news/how-netflix-works-with-isps-around-the-globe-to-deliver-a-great-viewing-experience">How Netflix works with ISPs around the globe</a></li>
+<li>Netflix — <a href="https://openconnect.netflix.com/en/">Open Connect</a></li>
+</ul>
+<h3 id="three-platforms-three-delivery-strategies">Three platforms, three delivery strategies</h3>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th></th><th>Netflix</th><th>Disney+</th><th>Max (Warner Bros. Discovery)</th></tr></thead><tbody><tr><td><strong>Video delivery</strong></td><td>Own CDN: Open Connect</td><td>Several CDN partners, incl. on-net caches in ISPs</td><td>Four commercial CDNs</td></tr><tr><td><strong>Build or buy</strong></td><td>Builds its own appliances</td><td>Rents several; builds its own load balancer</td><td>Rents: CloudFront, Google Cloud CDN, Akamai, Fastly</td></tr><tr><td><strong>How a CDN is picked</strong></td><td>Netflix steers to its own servers</td><td>Partners scored on rebuffering, start time, failures, bitrate</td><td>Multi-CDN for resilience at more than an exabyte a month</td></tr><tr><td><strong>Control plane</strong></td><td>AWS</td><td>Streaming platform built from BAMTech</td><td>AWS as primary cloud</td></tr></tbody></table></div>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Streaming Media — <a href="https://www.streamingmedia.com/Articles/ReadArticle.aspx?ArticleID=145721">Disney Streaming on multi-CDN load balancing</a></li>
+<li>Streaming Media — <a href="https://www.streamingmedia.com/Articles/ReadArticle.aspx?ArticleID=150246">Disney Streaming on QoE metrics</a></li>
+<li>TechCrunch — <a href="https://techcrunch.com/2023/05/05/warner-bros-discovery-cto-and-cpo-explain-how-they-made-max-less-buggy/">How WBD made Max less buggy (2023)</a></li>
+</ul>
+<h3 id="live-events-break-the-copy-it-in-advance-trick">Live events break the &quot;copy it in advance&quot; trick</h3>
+<h4 id="why-live-is-hard">Why live is hard</h4>
+<ul>
+<li>Segments for a live game <strong>did not exist</strong> a few seconds ago — nothing to pre-fill</li>
+<li>Every viewer wants the <strong>same</strong> new segment within the same second</li>
+<li>A miss at 300 PoPs at once could become 300 requests to the origin</li>
+</ul>
+<h4 id="what-the-industry-does">What the industry does</h4>
+<ul>
+<li><strong>Request collapsing:</strong> a PoP sends one origin fetch per segment, the rest wait for it</li>
+<li><strong>Shield tiers:</strong> PoPs ask a regional cache, not the origin</li>
+<li><strong>Short manifest TTLs, long segment TTLs</strong></li>
+<li><strong>Multi-CDN failover</strong> and capacity booked in advance</li>
+</ul>
+<h3 id="fictional-campuspulse-case-what-must-never-be-shared">Fictional CampusPulse case: what must never be shared</h3>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>Share a video segment everywhere; never share a &quot;continue watching&quot; row.</p>
+</blockquote>
+<h4 id="the-incident">The incident</h4>
+<ul>
+<li>Luis opens <code>/account</code>, signed in</li>
+<li>The edge stores it under <strong>host + path</strong></li>
+<li>Maya requests <code>/account</code>: gets <strong>Luis&#39;s page</strong></li>
+</ul>
+<h4 id="the-rule">The rule</h4>
+<ul>
+<li>A cache stores under a <strong>key</strong>: host + path + query</li>
+<li>Depends on anything <strong>not in the key</strong>? Sharing leaks</li>
+<li>Personalized → <strong>private</strong>: browser only</li>
+</ul>
+<h3 id="where-should-each-of-these-be-answered--and-is-it-safe-to-share">Where should each of these be answered — and is it safe to share?</h3>
+<ol>
+<li>A 4-second segment of episode 3 in 1080p, requested by 40,000 viewers tonight</li>
+<li>CampusPulse&#39;s <code>/assets/index-C4c61eeb.js</code>, built by Vite</li>
+<li>CampusPulse&#39;s <code>/api/status</code>, identical for everyone, changes every few seconds</li>
+<li>A streaming app&#39;s &quot;Continue watching&quot; row for the signed-in viewer</li>
+</ol>
+<h3 id="what-block-b-does-with-this">What Block B does with this</h3>
+<ul>
+<li>You now know <strong>where</strong> copies live and <strong>what</strong> may be shared</li>
+<li>Block B opens the stack: browser, service worker, React data cache, CDN, reverse proxy, Redis, database</li>
+<li>For each layer: what it is good at, a real product that implements it, and how it is invalidated</li>
+<li>Then one <strong>complete React + Node example</strong>: Vite build, Express headers, a Redis cache-aside, and invalidation on write</li>
+<li>HW5 asks you to design that stack for your own CampusPulse and prove it works</li>
+</ul>
+<h2 id="block-b--caching-layers">Block B — Caching layers</h2>
+<h3 id="caching-technologies-layer-by-layer">Caching technologies, layer by layer</h3>
+<p>Browser, service worker, React data cache, CDN, reverse proxy, Redis, and the database — and one React + Node app that configures four of them</p>
+<p>Every fast app is a stack of caches. Today you see the whole stack, then configure four layers of it in one React + Node app.</p>
+<h3 id="the-cache-stack-from-the-tab-to-the-database">The cache stack, from the tab to the database</h3>
+<p><img src="../../assets/class-notes/week05-session-s21-1.svg" alt="Seven caching layers in a row from user to data. Browser HTTP cache and service worker, both inside the user"></p>
+<p><em>Each layer is closer to the user, faster, and knows less about whether its copy is still true</em></p>
+<h3 id="what-each-layer-is-good-at-and-who-uses-it">What each layer is good at, and who uses it</h3>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Layer</th><th>Best for</th><th>Real-world example</th></tr></thead><tbody><tr><td><strong>React data cache</strong></td><td>Not refetching the same API data on every render or route change</td><td>TanStack Query in a React dashboard</td></tr><tr><td><strong>Service worker</strong></td><td>Offline and instant repeat loads; app-shell caching</td><td>Offline-capable progressive web apps</td></tr><tr><td><strong>Browser HTTP cache</strong></td><td>JS, CSS, images, fonts with long lifetimes</td><td>Every site: hashed bundle files</td></tr><tr><td><strong>CDN edge</strong></td><td>Static files and public responses near users</td><td>Video segments, product images, <code>/api/status</code></td></tr><tr><td><strong>Reverse proxy</strong></td><td>Caching whole responses in front of slow app servers</td><td>Nginx <code>proxy_cache</code>, Varnish on news sites</td></tr><tr><td><strong>App cache (Redis)</strong></td><td>Expensive query results, sessions, rate-limit counters</td><td>Facebook&#39;s memcache tier — billions of requests a second</td></tr></tbody></table></div>
+<p><strong>Sources</strong></p>
+<ul>
+<li>MDN — <a href="https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API">Service Worker API</a></li>
+<li>Varnish — <a href="https://varnish-cache.org/intro/">Introduction</a> · Nginx — <a href="https://nginx.org/en/docs/http/ngx_http_proxy_module.html"><code>proxy_cache</code></a></li>
+<li>USENIX NSDI &#39;13 — <a href="https://www.usenix.org/conference/nsdi13/technical-sessions/presentation/nishtala">Scaling Memcache at Facebook</a></li>
+<li>AWS — <a href="https://aws.amazon.com/caching/">Caching overview</a></li>
+</ul>
+<h3 id="four-questions-pick-the-layer-for-you">Four questions pick the layer for you</h3>
+<ul>
+<li><strong>Who may see this copy?</strong> One user → device layers only. Everyone → any layer</li>
+<li><strong>How stale may it be?</strong> Never → don&#39;t cache, or revalidate every time. Seconds → short TTL. Forever → hashed name</li>
+<li><strong>How expensive is a miss?</strong> A 300 ms query hit 1,000 times a minute is worth caching; a 2 ms lookup may not be</li>
+<li><strong>How will you throw it away?</strong> Expire on a timer, delete on write, or change the name — decide <strong>before</strong> caching</li>
+</ul>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>If you cannot answer the fourth question, you are not ready to add the cache.
+Stale data that you cannot remove is a bug you shipped on purpose.</p>
+</blockquote>
+<h3 id="campuspulse-in-react--node-cached-end-to-end">CampusPulse in React + Node, cached end to end</h3>
+<h3 id="four-kinds-of-response-four-caching-decisions">Four kinds of response, four caching decisions</h3>
+<p><img src="../../assets/class-notes/week05-session-s25-1.svg" alt="The CampusPulse sample architecture. A browser talks through a CDN to one Express server. Express serves four kinds of response. Hashed assets: cached by browser and CDN for one year. The index.html shell: no-cache, revalidated every load. API status: public for 10 seconds at browser and CDN, plus Redis for 10 seconds. API incidents: no-cache for browsers and CDN, Redis for 30 seconds with delete on write. API me: private, no-store, never cached. Redis or in-memory cache sits beside Express, and a slow database sits behind it."></p>
+<p><em>One Express server serves the React build and the API, and makes a different caching decision for each route</em></p>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Course — <a href="samples/react-node-cache/index.html"><code>react-node-cache</code> sample</a></li>
+</ul>
+<h3 id="step-1--vite-already-fingerprints-your-build">Step 1 — Vite already fingerprints your build</h3>
+<pre><code class="language-text">dist/
+├── index.html                ← small; names the current bundle
+└── assets/
+    ├── index-C4c61eeb.js     ← the hash changes when the bytes change
+    └── index-9b73e0aa.css
+
+# index.html after the build:
+&lt;script type=&quot;module&quot; src=&quot;/assets/index-C4c61eeb.js&quot;&gt;&lt;/script&gt;
+</code></pre>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>New code → new filename → a URL no cache has ever seen. That is why the files
+can be cached for a year with nothing to purge, and why <code>index.html</code> cannot.</p>
+</blockquote>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Vite — <a href="https://vite.dev/guide/build">Building for production</a></li>
+</ul>
+<h3 id="step-2--express-long-lived-assets-a-shell-that-always-checks">Step 2 — Express: long-lived assets, a shell that always checks</h3>
+<pre><code class="language-js">// Hashed build output: new bytes get a new URL, so browsers and
+// CDNs may keep these for a year. A missing asset is a 404.
+app.use(&quot;/assets&quot;, express.static(resolve(distDir, &quot;assets&quot;), {
+  immutable: true, maxAge: &quot;1y&quot;, index: false, fallthrough: false,
+}));
+// → Cache-Control: public, max-age=31536000, immutable
+
+// The shell names the current hashes, so every load checks for a
+// newer deploy — a cheap 304 Not Modified when nothing changed.
+app.get(&quot;/{*splat}&quot;, (req, res) =&gt; {
+  res.set(&quot;Cache-Control&quot;, &quot;no-cache&quot;);
+  res.sendFile(&quot;index.html&quot;, { root: distDir });
+});
+</code></pre>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Express 5 — <a href="https://expressjs.com/en/5x/api.html"><code>express.static</code> and <code>res.sendFile</code></a></li>
+</ul>
+<h3 id="step-3--one-cache-control-decision-per-api-route">Step 3 — one Cache-Control decision per API route</h3>
+<pre><code class="language-js">app.get(&quot;/api/status&quot;, async (req, res) =&gt; {        // same for everyone
+  const { value, state } = await cached(&quot;status:v1&quot;, 10, () =&gt; db.status());
+  res.set({ &quot;Cache-Control&quot;: &quot;public, max-age=10&quot;, &quot;X-Cache&quot;: state });
+  res.json(value);
+});
+
+app.get(&quot;/api/incidents&quot;, async (req, res) =&gt; {     // changes on writes
+  const { value, state } = await cached(&quot;incidents:open:v1&quot;, 30,
+    () =&gt; db.openIncidents());
+  res.set({ &quot;Cache-Control&quot;: &quot;no-cache&quot;, &quot;X-Cache&quot;: state });
+  res.json({ incidents: value });
+});
+
+app.get(&quot;/api/me&quot;, (req, res) =&gt; {                  // one user only
+  res.set(&quot;Cache-Control&quot;, &quot;private, no-store&quot;);
+  // … read the session cookie and respond …
+});
+</code></pre>
+<h3 id="step-4--cache-aside-with-a-stampede-guard">Step 4 — cache-aside, with a stampede guard</h3>
+<pre><code class="language-js">async function cached(key, ttlSeconds, load) {
+  const hit = await store.get(key);
+  if (hit !== null) return { value: JSON.parse(hit), state: &quot;HIT&quot; };
+  if (!inflight.has(key)) {                      // first miss does the work
+    inflight.set(key, (async () =&gt; {
+      try {
+        const value = await load();
+        await store.setEx(key, ttlSeconds, JSON.stringify(value));
+        return value;
+      } finally {
+        inflight.delete(key);
+      }
+    })());
+  }
+  return { value: await inflight.get(key), state: &quot;MISS&quot; };
+}
+</code></pre>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Redis — <a href="https://redis.io/solutions/caching/">Caching</a> · <a href="https://redis.io/docs/latest/develop/clients/nodejs/">Node.js client</a></li>
+</ul>
+<h3 id="step-5--every-write-deletes-the-keys-it-changed">Step 5 — every write deletes the keys it changed</h3>
+<pre><code class="language-js">app.post(&quot;/api/incidents&quot;, jsonBody, async (req, res) =&gt; {
+  // … refuse unless writes are enabled; validate title and service …
+  const created = await db.createIncident({ title: title.trim(), service });
+  await Promise.all([store.del(&quot;incidents:open:v1&quot;), store.del(&quot;status:v1&quot;)]);
+  res.status(201).location(`/api/incidents/${created.id}`).json(created);
+});
+</code></pre>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>The next read is a <code>MISS</code> and loads fresh data. A new incident changes the
+status summary too — forgetting a <strong>dependent key</strong> is the classic bug.</p>
+</blockquote>
+<h3 id="step-6--react-keeps-one-shared-copy-in-the-tab">Step 6 — React keeps one shared copy in the tab</h3>
+<pre><code class="language-jsx">import { useQuery } from &quot;@tanstack/react-query&quot;;
+
+export function StatusBanner() {
+  const { data, isPending } = useQuery({
+    queryKey: [&quot;status&quot;],
+    queryFn: () =&gt; fetch(&quot;/api/status&quot;).then((r) =&gt; r.json()),
+    staleTime: 10_000,   // every component shares one copy for 10 s
+  });
+  if (isPending) return &lt;p&gt;Checking services…&lt;/p&gt;;
+  const down = data.services.filter((s) =&gt; s.state !== &quot;operational&quot;);
+  return &lt;p&gt;{down.length ? `${down.length} degraded` : &quot;All clear&quot;}&lt;/p&gt;;
+}
+</code></pre>
+<p><strong>Sources</strong></p>
+<ul>
+<li>TanStack Query — <a href="https://tanstack.com/query/latest/docs/framework/react/guides/caching">Caching examples</a></li>
+</ul>
+<h3 id="demo-watch-the-app-cache-absorb-the-load">Demo: watch the app cache absorb the load</h3>
+<h4 id="steps-1">Steps</h4>
+<ol>
+<li>In <code>weeks/week05/samples/react-node-cache</code>: <code>npm install</code>, then <code>npm start</code></li>
+<li>Open <code>http://127.0.0.1:3000/</code> with DevTools → Network, then reload</li>
+<li>Open <code>/api/status</code> and reload twice; read <code>X-Cache</code> and the time column</li>
+</ol>
+<h4 id="expected-observations-1">Expected observations</h4>
+<ul>
+<li>Asset: <code>200 (memory cache)</code> on reload; shell: <code>304</code> or a quick revalidated <code>200</code></li>
+<li><code>/api/status</code>: <code>MISS</code> near 300 ms, then <code>HIT</code> in a few ms</li>
+</ul>
+<h4 id="fallback-1">Fallback</h4>
+<p>Run <code>npm test</code> in the sample and read the eight passing test names aloud.</p>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Course — <a href="samples/react-node-cache/index.html"><code>react-node-cache</code> README</a></li>
+</ul>
+<h3 id="service-workers-you-write-the-caching-strategy-yourself">Service workers: you write the caching strategy yourself</h3>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Strategy</th><th>What it does</th><th>Use it for</th></tr></thead><tbody><tr><td><strong>Cache first</strong></td><td>Answer from Cache Storage; network only on a miss</td><td>Hashed assets, fonts, the app shell</td></tr><tr><td><strong>Network first</strong></td><td>Try the network; fall back to the cache when offline</td><td>Pages and API data that should be current</td></tr><tr><td><strong>Stale-while-revalidate</strong></td><td>Answer from cache now, refresh it in the background</td><td>Avatars, non-critical lists, news feeds</td></tr><tr><td><strong>Network only</strong></td><td>Never cache</td><td>Sign-in, payments, anything personal and live</td></tr><tr><td><strong>Cache only</strong></td><td>Never touch the network</td><td>Files pre-cached at install time</td></tr></tbody></table></div>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Chrome for Developers — <a href="https://developer.chrome.com/docs/workbox/caching-strategies-overview">Workbox caching strategies</a></li>
+</ul>
+<h3 id="the-two-hard-problems-stale-data-and-stampedes">The two hard problems: stale data and stampedes</h3>
+<h4 id="throwing-copies-away">Throwing copies away</h4>
+<ul>
+<li><strong>TTL:</strong> simplest; accept staleness up to N seconds</li>
+<li><strong>Delete on write:</strong> exact, but only where you can reach (Redis, not browsers)</li>
+<li><strong>New name:</strong> hashed files and versioned keys like <code>status:v1</code> → <code>v2</code></li>
+<li><strong>Purge:</strong> ask the CDN to forget a URL — slow, and never reaches browsers</li>
+</ul>
+<h4 id="surviving-a-cold-cache">Surviving a cold cache</h4>
+<ul>
+<li>A popular key expires and 1,000 requests miss at once: a <strong>stampede</strong></li>
+<li><strong>Coalesce:</strong> one loader per key (the <code>inflight</code> map)</li>
+<li><strong>Serve stale while refreshing:</strong> answer with the old copy, update behind it</li>
+<li><strong>Jitter TTLs</strong> so a thousand keys do not expire in the same second</li>
+</ul>
+<h3 id="the-header-vocabulary-as-reference--what-each-one-is-for">The header vocabulary, as reference — what each one is for</h3>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>You want…</th><th>Header / directive</th><th>Layer it talks to</th></tr></thead><tbody><tr><td>Keep a hashed file for a year</td><td><code>public, max-age=31536000, immutable</code></td><td>Browser + CDN</td></tr><tr><td>Cache, but check before each reuse</td><td><code>no-cache</code> + an <code>ETag</code> (answer: <code>304</code>)</td><td>Browser + CDN</td></tr><tr><td>Never store it anywhere</td><td><code>no-store</code> (<code>private</code> = this user&#39;s browser only)</td><td>Every layer</td></tr><tr><td>Different lifetime for shared caches</td><td><code>s-maxage=N</code> (overrides <code>max-age</code> at the CDN)</td><td>CDN, proxies</td></tr><tr><td>Serve stale while refreshing or during an outage</td><td><code>stale-while-revalidate</code>, <code>stale-if-error</code></td><td>Browser + CDN</td></tr><tr><td>Add a request header to the cache key</td><td><code>Vary: Accept-Encoding</code> (or a CDN key rule)</td><td>Browser + CDN</td></tr></tbody></table></div>
+<p><strong>Sources</strong></p>
+<ul>
+<li>MDN — <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Caching">HTTP caching</a></li>
+<li>IETF — <a href="https://www.rfc-editor.org/rfc/rfc9111.html">RFC 9111, HTTP Caching</a></li>
+<li>Course — <a href="reference.html">Week 5 reference</a></li>
+</ul>
+<h3 id="the-edge-also-shrinks-the-bytes-it-serves">The edge also shrinks the bytes it serves</h3>
+<ul>
+<li><strong>Compression:</strong> Brotli or gzip on text (HTML, JS, CSS, JSON) — often 60–80% smaller</li>
+<li>The browser says what it accepts (<code>Accept-Encoding</code>); the server or CDN picks one</li>
+<li><strong>Images</strong> are usually the heaviest bytes: AVIF or WebP, sized with <code>srcset</code>, with <code>width</code> and <code>height</code> set</li>
+<li>Many CDNs compress and resize images for you at the PoP — it is a setting, not code</li>
+<li>HW5 Task 4 asks you to <strong>measure</strong> this on your deployment, not assume it</li>
+</ul>
+<p><strong>Sources</strong></p>
+<ul>
+<li>MDN — <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Compression">Compression in HTTP</a></li>
+<li>MDN — <a href="https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Responsive_images">Responsive images</a></li>
+</ul>
+<h3 id="design-the-cache-for-two-campuspulse-features">Design the cache for two CampusPulse features</h3>
+<ol>
+<li><strong>Building hours</strong> (<code>/api/buildings/hours</code>): same for everyone, edited by staff about once a week, read on every page load</li>
+<li><strong>&quot;My reports&quot;</strong> (<code>/api/me/reports</code>): a signed-in student&#39;s own outage reports, updated when they file one</li>
+</ol>
+<p>For each, name the <strong>layer(s)</strong>, the <strong>key</strong>, <strong>how it is invalidated</strong>, and <strong>one line of config</strong> (header or code).</p>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Course — <a href="samples/react-node-cache/index.html"><code>react-node-cache</code> sample</a></li>
+</ul>
+<h3 id="what-block-c-does-with-this">What Block C does with this</h3>
+<ul>
+<li>Caching is a performance claim. Block C asks: <strong>did it actually help a person?</strong></li>
+<li>Core Web Vitals (LCP, INP, CLS) and the rendering choice behind them</li>
+<li>Accessibility checks that tools catch and the ones they miss</li>
+<li>Logs, metrics, traces, and an SLO — so you know when the cache hides a failure</li>
+<li>Then the lab: reproduce the Luis/Maya leak on your laptop, fix it, and measure</li>
+</ul>
+<h2 id="block-c--measure-and-observe">Block C — Measure and observe</h2>
+<h3 id="measuring-the-human-experience--and-knowing-when-it-breaks">Measuring the human experience — and knowing when it breaks</h3>
+<p>Core Web Vitals, accessibility as a release gate, and the smallest observability that would have told you</p>
+<p>Everything so far was about bytes. This block is about whether a person noticed.</p>
+<h3 id="fictional-campuspulse-case-fast-page-failed-experience">Fictional CampusPulse case: fast page, failed experience</h3>
+<h4 id="the-dashboard-is-green">The dashboard is green</h4>
+<ul>
+<li>LCP is <code>1.4 s</code>, INP is <code>110 ms</code>, and CLS is <code>0.02</code></li>
+<li>Every report request in the logs returns <strong>200</strong></li>
+<li>The release is declared healthy</li>
+</ul>
+<h4 id="maya-cannot-submit">Maya cannot submit</h4>
+<ul>
+<li>Keyboard focus never reaches <strong>Report outage</strong></li>
+<li>The automated scanner reports no critical violation</li>
+<li>A useful SLI is completed reports, split by input path, not page loads</li>
+</ul>
+<h3 id="three-vitals-and-one-of-them-replaced-the-one-you-learned">Three vitals, and one of them replaced the one you learned</h3>
+<ul>
+<li><strong>LCP</strong> — time to the largest visible element. Good is <strong>≤ 2.5 s</strong> at p75. Bad means slow origin, render-blocking CSS, or an unoptimized hero</li>
+<li><strong>INP</strong> — worst interaction to next paint. Good is <strong>≤ 200 ms</strong> at p75. Bad means long tasks on the main thread</li>
+<li><strong>CLS</strong> — unexpected layout movement. Good is <strong>≤ 0.1</strong>. Bad means unsized images, late banners, or a font swap</li>
+</ul>
+<blockquote>
+<p><strong>Failure to avoid</strong></p>
+<p><strong>INP replaced FID in March 2024.</strong> If you learned First Input Delay, unlearn it.
+FID timed only the <em>delay before</em> the first handler ran — a page could score a
+perfect FID and still freeze for two seconds after every click.</p>
+</blockquote>
+<p><strong>Sources</strong></p>
+<ul>
+<li>web.dev — <a href="https://web.dev/articles/vitals">Core Web Vitals</a> · <a href="https://web.dev/articles/inp">INP</a> · Google — <a href="https://web.dev/blog/inp-cwv-launch">INP becomes a Core Web Vital</a></li>
+</ul>
+<h3 id="lab-and-field-answer-different-questions">Lab and field answer different questions</h3>
+<ul>
+<li><strong>Lab</strong> — Lighthouse, WebPageTest, your CI. One device, one network, <strong>reproducible</strong>, so you can A/B a change</li>
+<li><strong>Field</strong> — <code>web-vitals</code> in your own app. Every device and network, <strong>not reproducible</strong>: you cannot re-run Tuesday</li>
+<li>Lab gives you a <strong>diagnosis</strong> — which element, which script. Field gives you a <strong>verdict</strong> — is it bad, and for whom</li>
+</ul>
+<blockquote>
+<p><strong>Caution</strong></p>
+<p><strong>You will have no CrUX data, and that is correct.</strong> Chrome&#39;s public field
+dataset only covers origins above a popularity threshold. A project three people
+have visited will never qualify — the absence of data is a property of the
+dataset, not a defect in your site.</p>
+</blockquote>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Chrome — <a href="https://developer.chrome.com/docs/crux/methodology#eligibility">CrUX methodology: eligibility</a></li>
+</ul>
+<h3 id="a-budget-is-a-number-you-agreed-to-fail">A budget is a number you agreed to fail</h3>
+<pre><code class="language-console">                        /slow      /fast    budget   verdict
+  Performance score        59        100         —
+  First Contentful Paint  0.8 s     0.6 s     1.8 s   pass / pass
+  Largest Contentful Pt   3.7 s     0.8 s     2.5 s   FAIL / pass
+  Total Blocking Time    2750 ms      0 ms    200 ms  FAIL / pass
+  Cumulative Layout Shift    0          0       0.1   pass / pass
+
+  Same HTML. Same image. Three delivery changes:
+    render-blocking CSS on a slow response -&gt; critical CSS inlined
+    unsized &lt;img&gt;                          -&gt; width/height + fetchpriority
+    700 ms synchronous script              -&gt; deferred, off critical path
+</code></pre>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>Same user-visible content. Only the resource scheduling and script execution
+changed. <strong>Delivery is a first-class engineering decision, not a deployment
+detail.</strong></p>
+</blockquote>
+<h3 id="windows-put-both-pages-on-screen-and-measure">Windows: put both pages on screen and measure</h3>
+<pre><code class="language-powershell">Set-Location .\weeks\week05\samples ; node origin.mjs  # Terminal A
+$o = &#39;http://127.0.0.1:8080&#39;                          # Terminal B
+curl.exe -sS --noproxy &#39;*&#39; -o NUL -w &#39;%{http_code} &#39; &quot;$o/slow&quot;
+curl.exe -sS --noproxy &#39;*&#39; -o NUL -w &quot;%{http_code}`n&quot; &quot;$o/fast&quot;
+# Expect: 200 200
+Start-Process &quot;$o/slow&quot;
+# Then F12 &gt; Lighthouse &gt; Navigation + Mobile &gt; Analyze.
+# Repeat on /fast. Cleanup: Ctrl+C Terminal A when done.
+</code></pre>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Course — <a href="samples/origin.mjs"><code>/slow</code> and <code>/fast</code> handlers</a></li>
+</ul>
+<h3 id="macos-put-both-pages-on-screen-and-measure">macOS: put both pages on screen and measure</h3>
+<pre><code class="language-bash">cd weeks/week05/samples &amp;&amp; node origin.mjs   # Terminal A
+o=&#39;http://127.0.0.1:8080&#39;                    # Terminal B
+curl -sS --noproxy &#39;*&#39; -o /dev/null -w &#39;%{http_code} &#39; &quot;$o/slow&quot;
+curl -sS --noproxy &#39;*&#39; -o /dev/null -w &#39;%{http_code}\n&#39; &quot;$o/fast&quot;
+# Expect: 200 200
+open &quot;$o/slow&quot;
+# Then Cmd+Opt+I &gt; Lighthouse &gt; Navigation + Mobile &gt; Analyze.
+# Repeat on /fast. Cleanup: Ctrl-C Terminal A when done.
+</code></pre>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Course — <a href="samples/origin.mjs"><code>/slow</code> and <code>/fast</code> handlers</a></li>
+</ul>
+<h3 id="rendering-strategy-is-a-delivery-decision-not-a-framework-preference">Rendering strategy is a delivery decision, not a framework preference</h3>
+<ul>
+<li><strong>CSR</strong> — cheapest origin; content waits on JS. The shell and assets still cache well, the <em>data</em> does not</li>
+<li><strong>SSR</strong> — content in the first response; costs origin work per request, <strong>and it is dynamic: mind the cache key</strong></li>
+<li><strong>SSG</strong> — no origin work, fully edge-cacheable, and stale until you rebuild</li>
+<li><strong>ISR</strong> — SSG&#39;s economics with a bounded staleness window</li>
+<li>Ask &quot;how fresh must this be, is it the same for everyone, and who pays for it?&quot; — that picks the strategy</li>
+</ul>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>ISR is <code>stale-while-revalidate</code> implemented in your framework instead of your
+CDN. You already know the semantics; only the vendor changed.</p>
+</blockquote>
+<h3 id="accessibility">Accessibility</h3>
+<h3 id="the-scanner-is-clean-ish-the-page-is-not-usable">The scanner is clean-ish. The page is not usable</h3>
+<pre><code class="language-console">$ npx @axe-core/cli http://127.0.0.1:8080/a11y
+
+  Violation of &quot;color-contrast&quot; with 3 occurrences!
+  Violation of &quot;image-alt&quot;      with 1 occurrences!
+  Violation of &quot;tabindex&quot;       with 1 occurrences!
+
+  5 Accessibility issues detected.
+
+  Please note that only 20% to 50% of all accessibility issues can
+  automatically be detected. Manual testing is always required.
+</code></pre>
+<blockquote>
+<p><strong>Caution</strong></p>
+<p>That last paragraph is printed by the axe CLI itself, unprompted. <strong>Deque ships
+their scanner with a disclaimer about their scanner.</strong> Read it as an
+instruction, not a footnote.</p>
+</blockquote>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Deque — <a href="https://github.com/dequelabs/axe-core/blob/develop/doc/rule-descriptions.md">axe-core rule descriptions</a></li>
+<li>W3C WAI — <a href="https://www.w3.org/WAI/WCAG22/quickref/">How to Meet WCAG 2.2</a></li>
+</ul>
+<h3 id="demo-the-scanner-then-your-hands-off-the-mouse">Demo: the scanner, then your hands off the mouse</h3>
+<h4 id="steps-2">Steps</h4>
+<ol>
+<li>Origin running? <code>node origin.mjs</code> in <code>weeks/week05/samples</code></li>
+<li>Run the scanner. Read its own disclaimer aloud</li>
+<li>Click once into the page, then <strong>Tab, Enter, Escape</strong> only</li>
+</ol>
+<h4 id="expected-observations-2">Expected observations</h4>
+<ul>
+<li>3 rules found; Enter does nothing; focus invisible</li>
+</ul>
+<h4 id="fallback-2">Fallback</h4>
+<p>No Chrome? Do step 3 alone. See <code>lab.md</code> §5b.</p>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Course — <a href="samples/origin.mjs">the planted defects</a> · <a href="lab.html">lab §5</a></li>
+</ul>
+<h3 id="windows-run-the-scanner-then-open-the-page">Windows: run the scanner, then open the page</h3>
+<pre><code class="language-powershell">$a = &#39;http://127.0.0.1:8080/a11y&#39;
+$chrome = Join-Path $env:ProgramFiles &#39;Google\Chrome\Application\chrome.exe&#39;
+curl.exe -sS --noproxy &#39;*&#39; -o NUL -w &quot;a11y=%{http_code}`n&quot; $a
+# First npx use needs internet; adjust the browser path if necessary.
+npx --yes @axe-core/cli --version
+npx --yes @axe-core/cli $a --chrome-path $chrome
+Start-Process -FilePath $chrome -ArgumentList $a
+</code></pre>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Deque — <a href="https://github.com/dequelabs/axe-core-npm/tree/develop/packages/cli">axe-core CLI</a></li>
+</ul>
+<h3 id="macos-run-the-scanner-then-open-the-page">macOS: run the scanner, then open the page</h3>
+<pre><code class="language-bash">a=&#39;http://127.0.0.1:8080/a11y&#39;
+chrome_dir=&#39;/Applications/Google Chrome.app/Contents/MacOS&#39;
+chrome=&quot;$chrome_dir/Google Chrome&quot;
+curl -sS --noproxy &#39;*&#39; -o /dev/null -w &#39;a11y=%{http_code}\n&#39; &quot;$a&quot;
+# First npx use needs internet; adjust the browser path if necessary.
+npx --yes @axe-core/cli --version
+npx --yes @axe-core/cli &quot;$a&quot; --chrome-path &quot;$chrome&quot;
+open -a &quot;Google Chrome&quot; &quot;$a&quot;
+</code></pre>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Deque — <a href="https://github.com/dequelabs/axe-core-npm/tree/develop/packages/cli">axe-core CLI</a></li>
+</ul>
+<h3 id="the-same-page-keyboard-only">The same page, keyboard only</h3>
+<h4 id="what-axe-reported">What axe reported</h4>
+<ul>
+<li>3 low-contrast elements</li>
+<li>1 image with no <code>alt</code></li>
+<li>1 positive <code>tabindex</code></li>
+</ul>
+<p>Lighthouse accessibility: <strong>80 / 100</strong></p>
+<p>The <code>label</code> rule <strong>passed</strong>, 2 nodes.</p>
+<h4 id="what-tab-and-enter-found">What Tab and Enter found</h4>
+<ul>
+<li>Focus is <strong>invisible</strong> — <code>:focus { outline: none }</code></li>
+<li>The Submit &quot;button&quot; is a <code>div</code> — <strong>Enter does nothing</strong></li>
+<li>The dialog ignores Escape and strands focus</li>
+<li>The &quot;label&quot; is a <strong>placeholder</strong>; it vanishes as you type</li>
+</ul>
+<h3 id="the-exact-keystrokes-and-what-to-watch-for">The exact keystrokes, and what to watch for</h3>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Press</th><th>On</th><th>Watch for</th></tr></thead><tbody><tr><td><code>Tab</code> ×1</td><td>from the address bar</td><td>Focus lands on &quot;Back to status&quot; — <strong>last</strong> visually</td></tr><tr><td><code>Tab</code> ×2</td><td>to Building code</td><td>The placeholder is the only label</td></tr><tr><td>any key</td><td>in Building code</td><td>The label is gone while you type</td></tr><tr><td><code>Enter</code></td><td>on <strong>Submit report</strong></td><td>Nothing happens — it is a <code>div</code></td></tr><tr><td>mouse, then <code>Escape</code></td><td>the help dialog</td><td>It stays open; focus never entered</td></tr></tbody></table></div>
+<p><strong>Sources</strong></p>
+<ul>
+<li>W3C WAI — <a href="https://www.w3.org/WAI/perspective-videos/keyboard/">Keyboard accessibility</a></li>
+</ul>
+<h3 id="what-this-page-proves-and-what-it-does-not">What this page proves, and what it does not</h3>
+<ul>
+<li><strong>Real:</strong> every defect above is a pattern that ships in production code, and the keyboard finds all of them</li>
+<li><strong>Real:</strong> the scanner&#39;s own printed disclaimer is its vendor&#39;s position, not ours</li>
+<li><strong>Fixture:</strong> the defect list is curated and documented — a real page has no answer key</li>
+<li><strong>Pinned:</strong> 3 rules / 5 occurrences is <strong>axe-core 4.12.1</strong>; a newer build may catch more, or fewer</li>
+<li><strong>Not a score:</strong> Lighthouse gave this page <strong>80 / 100</strong>, and a keyboard user cannot submit the form</li>
+</ul>
+<blockquote>
+<p><strong>Caution</strong></p>
+<p>&quot;The scanner found nothing&quot; is not a result on your own app until you have
+also done the five-minute keyboard pass. The scan and the pass answer different
+questions.</p>
+</blockquote>
+<h3 id="the-five-minute-keyboard-pass-before-every-release">The five-minute keyboard pass, before every release</h3>
+<ol>
+<li><strong>Tab from the top.</strong> Can you reach every control? Does the order match the visual order?</li>
+<li><strong>Can you see where you are?</strong> If the focus ring is invisible, stop. Everything after this is guesswork</li>
+<li><strong>Enter and Space</strong> on everything focusable. Does it do what clicking does?</li>
+<li><strong>Open a dialog.</strong> Does focus move in, stay in, leave on Escape, and return where it started?</li>
+<li><strong>Cause an error.</strong> Is it announced, associated with the field, and readable without colour?</li>
+</ol>
+<blockquote>
+<p><strong>Tip</strong></p>
+<p>Five minutes, no tools, no install. It finds more real defects than any scanner
+you can buy, and you can run it on the pull request.</p>
+</blockquote>
+<h3 id="windows-the-fallbacks-and-stopping-the-origin">Windows: the fallbacks, and stopping the origin</h3>
+<pre><code class="language-powershell">Get-Content .\weeks\week05\samples\k6-baseline-summary.txt
+Get-Content .\weeks\week05\samples\campuspulse-load-profile.js
+# Cleanup: Ctrl+C the origin in Terminal A, and close the tabs
+# on /a11y, /slow and /fast. That is the whole cleanup.
+# If 8080 looks busy, LOOK - never end what you did not start:
+Get-NetTCPConnection -LocalPort 8080 -State Listen -EA Ignore |
+  ForEach-Object { Get-Process -Id $_.OwningProcess }
+# Busy port? Use the saved captures; leave other processes alone.
+</code></pre>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Course — <a href="samples/k6-baseline-summary.txt">captured k6 baseline</a> · <a href="samples/campuspulse-load-profile.js">load profile</a></li>
+</ul>
+<h3 id="macos-the-fallbacks-and-stopping-the-origin">macOS: the fallbacks, and stopping the origin</h3>
+<pre><code class="language-bash">less weeks/week05/samples/k6-baseline-summary.txt      # q quits
+less weeks/week05/samples/campuspulse-load-profile.js
+# Cleanup: Ctrl-C the origin in Terminal A, and close the tabs
+# on /a11y, /slow and /fast. That is the whole cleanup.
+# If 8080 looks busy, LOOK - never end what you did not start:
+lsof -nP -iTCP:8080 -sTCP:LISTEN
+# Busy port? Use the saved captures; leave other processes alone.
+</code></pre>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Course — <a href="samples/k6-baseline-summary.txt">captured k6 baseline</a> · <a href="samples/campuspulse-load-profile.js">load profile</a></li>
+</ul>
+<h3 id="observability">Observability</h3>
+<h3 id="three-telemetry-signals">Three telemetry signals</h3>
+<ul>
+<li><strong>Logs</strong> — what happened once, as structured JSON</li>
+<li><strong>Metrics</strong> — how often, how slow</li>
+<li><strong>Traces</strong> — where the time went</li>
+<li>Logs and traces join on <code>trace_id</code></li>
+<li>Metrics link to traces through exemplars — never put trace ids in metric labels</li>
+</ul>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>The useful log field here is <code>&quot;cache&quot;:&quot;MISS&quot;</code>: it turns &quot;the API was slow&quot; into &quot;the edge missed.&quot;</p>
+</blockquote>
+<h3 id="an-slo-is-a-sentence-about-users-a-dashboard-is-not">An SLO is a sentence about users. A dashboard is not</h3>
+<ul>
+<li><strong>SLI</strong> — the measurement. <em>&quot;Proportion of <code>/api/status</code> requests served in under 500 ms&quot;</em></li>
+<li><strong>SLO</strong> — the target over a window. <em>&quot;99% of those, over 28 days&quot;</em></li>
+<li><strong>Error budget</strong> — what the SLO permits you to lose: <strong>1% of eligible requests</strong></li>
+<li>Time-based instead? <em>&quot;99% of one-minute windows are good&quot;</em> — 1% of 28 days is <strong>6 h 43 m</strong></li>
+<li><strong>Alert on the SLI burning the budget</strong> — not on CPU, not on a single 500</li>
+</ul>
+<blockquote>
+<p><strong>Failure to avoid</strong></p>
+<p>An alert that fires when nothing is wrong trains people to ignore it. The next
+one is real, and by then nobody looks. <strong>Alert fatigue is a design failure, not
+a discipline failure.</strong></p>
+</blockquote>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Google SRE — <a href="https://sre.google/sre-book/service-level-objectives/">Service Level Objectives</a> · <a href="https://sre.google/workbook/alerting-on-slos/">Alerting on SLOs</a></li>
+</ul>
+<h3 id="your-status-page-renders-in-900-ms-but-nobody-can-submit-a-report-what-tells-you">Your status page renders in 900 ms but nobody can submit a report. What tells you?</h3>
+<ol>
+<li>Lighthouse in CI — scored 98 this morning</li>
+<li>An <code>axe</code> run in the pipeline — zero violations</li>
+<li>A metric: <code>http_requests_total{route=&quot;/incidents&quot;,status=&quot;2xx&quot;}</code></li>
+<li>An uptime check hitting <code>/healthz</code> every 60 s</li>
+</ol>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Google SRE — <a href="https://sre.google/sre-book/service-level-objectives/">Service Level Objectives</a></li>
+</ul>
+<h2 id="individual-practice">Individual practice</h2>
+<h3 id="individual-lab-cache-and-experience">Individual lab: cache and experience</h3>
+<p><strong>Core: 30 min + 5 min recovery. Parts 1 and 3 are optional.</strong></p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Part</th><th>Focus</th><th style="text-align:right">Min</th></tr></thead><tbody><tr><td>0</td><td>Two terminals, two synthetic accounts</td><td style="text-align:right">3</td></tr><tr><td>2</td><td>Observe all four cache states</td><td style="text-align:right">8</td></tr><tr><td>4</td><td>Test account-page isolation</td><td style="text-align:right">7</td></tr><tr><td>5</td><td><code>axe</code> plus keyboard access</td><td style="text-align:right">7</td></tr><tr><td>6</td><td>One SLI, SLO, and alert</td><td style="text-align:right">5</td></tr></tbody></table></div>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Course — <a href="lab.html">Week 5 lab: full commands, expected output, and troubleshooting</a></li>
+</ul>
+<h2 id="homework-brief">Homework brief</h2>
+<h3 id="hw5--own-the-edge">HW5 — Own the Edge</h3>
+<ul>
+<li>Put a CDN in front of your domain and build a <strong>cache-policy matrix</strong>: at least
+<strong>six content classes</strong>, each with its layer, key, invalidation, and rationale</li>
+<li>Implement <strong>one app-layer cache</strong> (cache-aside, Redis or memory) with HIT/MISS evidence</li>
+<li>Prove all four cache states, and reproduce <strong>and revert</strong> a cache-poisoning near-miss</li>
+<li>Measure against a stated performance budget and pilot your own <strong>RUM</strong> with <code>web-vitals</code></li>
+<li>Run <code>axe</code> <strong>and</strong> record a keyboard-only walkthrough that finds <strong>≥ 1 defect the scan missed</strong></li>
+<li>Stand up one SLI, one SLO, and one alert that has <strong>actually fired</strong></li>
+</ul>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>100 points · individual · due at the start of Week 6, before the midterm. This is
+Gate 3 — Delivered and observable. Full handout: <a href="homework.html"><code>homework.md</code></a>.</p>
+</blockquote>
+<h2 id="closing-logistics">Closing logistics</h2>
+<h3 id="before-you-leave">Before you leave</h3>
+<h4 id="released-today">Released today</h4>
+<ul>
+<li>The <a href="../../midterm/blueprint.html">midterm blueprint</a> and a
+<a href="../../midterm/practice-case.html">practice forensic case</a></li>
+<li><strong>The midterm is Week 6.</strong> Sit the practice case <strong>this week</strong>, closed-book and
+timed, while Weeks 1–5 are still warm</li>
+<li>Also complete the <a href="../week06/prep.html">Week 6 prep</a> before class</li>
+</ul>
+<h4 id="exit-ticket--one-line">Exit ticket — one line</h4>
+<ul>
+<li>Write one SLO for a feature on your own project, in the form: <em>&quot;X% of &lt;action&gt;
+complete in under Y, measured over Z days.&quot;</em></li>
+</ul>
+
+</main>
+<footer>Individual coursework. D2L contains dated deadlines, submissions and private course access.</footer>
+</body>
+</html>

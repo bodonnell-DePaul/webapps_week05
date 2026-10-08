@@ -1,0 +1,19 @@
+CampusPulse standard load profile — summary
+==========================================
+target            http://127.0.0.1:8788
+duration          180s (30s ramp / 120s hold / 30s ramp-down), peak 10 VUs
+requests          1326
+failed            0.0%
+
+latency (server wait / TTFB)
+  html   p95      2 ms
+  api    p95      1 ms
+  asset  p95      1 ms
+
+edge cache
+  hit ratio       98.5%
+  HIT / STALE     1068
+  MISS / EXPIRED  20
+  REVALIDATED     238   (bytes reused, origin contacted)
+  BYPASS/DYNAMIC  0
+  unrecognised    0
