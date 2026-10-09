@@ -60,12 +60,8 @@ reference is [requirements.md](requirements.md), with checks in
 
 | # | Requirement | Proof |
 | --- | --- | --- |
-| S1 | **Threat model**: assets, actors, trust boundaries and abuse cases, including MCP prompt-injection and tool abuse. | Diagram plus table |
-| S2 | **The top vulnerability classes are tested** against your own app: injection, broken access control (IDOR), XSS, SSRF on the third-party integration, and CSRF where cookies are used. Each is fixed or justified. | Attack and retest log |
-| S3 | **Supply chain**: lockfile, dependency audit, pinned versions, and secret scanning in CI. | CI output |
-| S4 | **Rate limiting** on login, write and third-party-backed endpoints. | 429 evidence |
-| S5 | **Data at scale**: load test within the course caps, one query plan before and after an index, and a backup that has been restored. | k6/plan output; restore log |
-| S6 | **Runbook** a stranger can follow, plus a **Game Day postmortem** of a failure you caused on purpose. | Documents |
+| S1 | **Rate limiting** on login, write and third-party-backed endpoints. | 429 evidence |
+| S2 | **Runbook** a stranger can follow, plus a **Game Day postmortem** of a failure you caused on purpose. | Documents |
 
 ## 5. Engineering-quality requirements
 
@@ -76,11 +72,9 @@ reference is [requirements.md](requirements.md), with checks in
 
 ## 6. Deliverables
 
-1. Production and staging URLs (HTTPS)
-2. Tagged release, plus image digest or build ID
+1. Production URLs (HTTPS)
 3. Repo with README, IaC/config, CI/CD and tests
 4. Architecture and trust-boundary diagrams
-5. Evidence dossier covering every F, D, S and Q item
 6. Load, scaling and cost analysis
 7. Runbook and Game Day postmortem
 8. AI provenance log
