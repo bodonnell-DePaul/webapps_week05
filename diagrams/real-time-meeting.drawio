@@ -1,0 +1,22 @@
+<mxfile host="app.diagrams.net" version="24.7.17">
+  <diagram id="meeting-architecture" name="Real-time meeting">
+    <mxGraphModel dx="1230" dy="560" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1230" pageHeight="560" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="participant-a" value="Participant A&#xa;Meeting application" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#17364E;strokeColor=#5EEAD4;strokeWidth=3;fontColor=#F3F8FC;fontSize=18;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="35" y="85" width="205" height="105" as="geometry"/></mxCell>
+        <mxCell id="participant-b" value="Participant B&#xa;Meeting application" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#17364E;strokeColor=#5EEAD4;strokeWidth=3;fontColor=#F3F8FC;fontSize=18;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="35" y="335" width="205" height="105" as="geometry"/></mxCell>
+        <mxCell id="control" value="Sign-in and meeting control&#xa;Membership • permissions • coordination" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#17364E;strokeColor=#5EEAD4;strokeWidth=3;fontColor=#F3F8FC;fontSize=18;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="355" y="65" width="260" height="115" as="geometry"/></mxCell>
+        <mxCell id="relay" value="Regional media relay&#xa;Forwards current streams" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#17364E;strokeColor=#FCA5A5;strokeWidth=3;fontColor=#F3F8FC;fontSize=18;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="355" y="335" width="260" height="115" as="geometry"/></mxCell>
+        <mxCell id="streams" value="Meeting media&#xa;Voice and camera&#xa;Right now" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#17364E;strokeColor=#FCA5A5;strokeWidth=3;fontColor=#F3F8FC;fontSize=18;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="735" y="335" width="210" height="115" as="geometry"/></mxCell>
+        <mxCell id="edge" value="Shared edge&#xa;Application files and help&#xa;Not live media" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#17364E;strokeColor=#FCD34D;strokeWidth=3;fontColor=#F3F8FC;fontSize=18;align=center;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="970" y="65" width="205" height="115" as="geometry"/></mxCell>
+        <mxCell id="e1" value="meeting setup" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#5EEAD4;strokeWidth=2;fontColor=#B6CCDE;endArrow=block;endFill=1;" edge="1" parent="1" source="participant-a" target="control"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" value="live audio and video" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FCA5A5;strokeWidth=3;fontColor=#FCA5A5;endArrow=block;endFill=1;" edge="1" parent="1" source="participant-a" target="relay"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e3" value="forward current streams" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FCA5A5;strokeWidth=3;fontColor=#FCA5A5;endArrow=block;endFill=1;" edge="1" parent="1" source="relay" target="streams"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e4" value="return live media" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FCA5A5;strokeWidth=3;fontColor=#FCA5A5;endArrow=block;endFill=1;" edge="1" parent="1" source="streams" target="participant-b"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e5" value="reusable downloads" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FCD34D;strokeWidth=2;fontColor=#B6CCDE;endArrow=block;endFill=1;" edge="1" parent="1" source="participant-a" target="edge"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="note" value="Coordination sets up the conversation. Relays carry the live exchange." style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#B6CCDE;fontSize=18;" vertex="1" parent="1"><mxGeometry x="315" y="495" width="630" height="35" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

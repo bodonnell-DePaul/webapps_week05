@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Measuring the human experience — and knowing when it breaks — Week 5 Block C — CSC 436 — Web Application Systems</title>
-<meta name="description" content="Core Web Vitals, accessibility as a release gate, and the smallest observability that would have told you">
+<title>Two kinds of video, two caching architectures — Week 5 Block C — CSC 436 — Web Application Systems</title>
+<meta name="description" content="How streaming libraries scale—and why live meetings cannot reuse yesterday's media">
 <meta name="generator" content="csc436-deck-pipeline">
 <meta name="course-week" content="05">
 <meta name="course-block" content="C">
@@ -129,7 +129,8 @@ body.is-blacked #stage { visibility: hidden; }
   height: 100%;
 }
 
-.slide.has-sources .slide-body { bottom: 112px; }
+/* Match the PPTX content box and leave the source footer its own space. */
+.slide.has-sources .slide-body { bottom: 128px; }
 
 /* ------------------------------------------------------------ furniture --- */
 
@@ -1212,342 +1213,247 @@ h1, h2, h3 {
 
 <main id="stage" data-deck-id="week05-blockC">
 <section class="slide slide--title" data-layout="title" data-phase="content" data-source-block="C" data-source-slide="1" data-title="" aria-label="Slide 1: title">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Measure and observe</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>1</b> / 26</span></div>
+<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Video architectures</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>1</b> / 12</span></div>
 <div class="slide-body"><div class="fit"><p class="kicker">CSC 436 — Web Application Systems</p>
-<h1>Measuring the human experience — and knowing when it breaks</h1>
-<p class="sub">Core Web Vitals, accessibility as a release gate, and the smallest observability that would have told you</p>
-<div class="title-meta"><span class="chip"><b>Week 5</b> · Block C</span><span class="chip">25 minutes</span><span class="chip">Updated 2026-10-04</span></div>
-<p>Everything so far was about bytes. This block is about whether a person noticed.</p>
+<h1>Two kinds of video, two caching architectures</h1>
+<p class="sub">How streaming libraries scale—and why live meetings cannot reuse yesterday's media</p>
+<div class="title-meta"><span class="chip"><b>Week 5</b> · Block C</span><span class="chip">25 minutes</span><span class="chip">Updated 2026-10-08</span></div>
+<p>Netflix, Disney+, Zoom, and Teams all show video. Their delivery architectures solve different problems.</p>
 </div></div>
 
 
 </section>
-<section class="slide slide--two-column" data-layout="two-column" data-phase="content" data-source-block="C" data-source-slide="2" data-title="Fictional CampusPulse case: fast page, failed experience" aria-label="Slide 2: Fictional CampusPulse case: fast page, failed experience">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Measure and observe</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>2</b> / 26</span></div>
-<div class="slide-body"><div class="fit"><h1>Fictional CampusPulse case: fast page, failed experience</h1>
-<div class="cols"><div class="col"><h3>The dashboard is green</h3>
+<section class="slide slide--two-column" data-layout="two-column" data-phase="content" data-source-block="C" data-source-slide="2" data-title="Start with the experience, not the vendor" aria-label="Slide 2: Start with the experience, not the vendor">
+<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Video architectures</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>2</b> / 12</span></div>
+<div class="slide-body"><div class="fit"><h1>Start with the experience, not the vendor</h1>
+
+<aside class="callout callout--key" role="note"><p class="callout-head"><span class="ico" aria-hidden="true">◆</span><span>Key idea</span></p><p>A useful cache holds a reusable copy. A live participant&#39;s next sentence does not exist yet.</p>
+</aside><div class="cols"><div class="col"><h3>A movie or episode</h3>
 <ul>
-<li>LCP is <code>1.4 s</code>, INP is <code>110 ms</code>, and CLS is <code>0.02</code></li>
-<li>Every report request in the logs returns <strong>200</strong></li>
-<li>The release is declared healthy</li>
+<li>Prepared before playback begins</li>
+<li>The same media serves many viewers</li>
+<li>Delivery can favor reuse</li>
 </ul>
-</div><div class="col"><h3>Maya cannot submit</h3>
+</div><div class="col"><h3>A live meeting</h3>
 <ul>
-<li>Keyboard focus never reaches <strong>Report outage</strong></li>
-<li>The automated scanner reports no critical violation</li>
-<li>A useful SLI is completed reports, split by input path, not page loads</li>
+<li>Participants create media as they speak</li>
+<li>Each voice and camera stream is unique</li>
+<li>Delivery must minimize delay</li>
 </ul>
 </div></div></div></div>
 
 
 </section>
-<section class="slide slide--bullets has-sources" data-layout="bullets" data-phase="content" data-source-block="C" data-source-slide="3" data-title="Three vitals, and one of them replaced the one you learned" aria-label="Slide 3: Three vitals, and one of them replaced the one you learned">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Measure and observe</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>3</b> / 26</span></div>
-<div class="slide-body"><div class="fit"><h1>Three vitals, and one of them replaced the one you learned</h1>
+<section class="slide slide--svg has-sources" data-layout="svg" data-phase="content" data-source-block="C" data-source-slide="3" data-title="A streaming library has a control path and a media path" aria-label="Slide 3: A streaming library has a control path and a media path">
+<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Video architectures</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>3</b> / 12</span></div>
+<div class="slide-body"><div class="fit"><h1>A streaming library has a control path and a media path</h1>
+<figure class="figure figure--plain"><div class="frame">
+<svg viewBox="0 0 1180 490" role="img" aria-label="High-level video-on-demand architecture. A viewer's television or phone asks identity and catalog services for account access, title details, and a playback plan. Separately, a media provider prepares multiple quality versions and stores video segments in origin storage. A content delivery network copies popular segments to regional and nearby edge locations. The player fetches segments from the nearest available copy and adapts quality to the connection.">
+  <defs>
+    <marker id="deck-s3-g1-c3a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#B6CCDE"/></marker>
+    <marker id="deck-s3-g1-c3b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#FCD34D"/></marker>
+  </defs>
+  <g font-family="Segoe UI, sans-serif" text-anchor="middle">
+    <rect x="25" y="174" width="190" height="112" rx="14" fill="#17364E" stroke="#5EEAD4" stroke-width="3"/>
+    <text x="120" y="216" fill="#5EEAD4" font-size="22" font-weight="700">Viewer's device</text>
+    <text x="120" y="250" fill="#B6CCDE" font-size="18">television · phone</text>
+    <text x="120" y="274" fill="#B6CCDE" font-size="18">playback player</text>
+    <rect x="290" y="36" width="225" height="116" rx="14" fill="#17364E" stroke="#5EEAD4" stroke-width="3"/>
+    <text x="402" y="79" fill="#5EEAD4" font-size="22" font-weight="700">Account and</text>
+    <text x="402" y="107" fill="#5EEAD4" font-size="22" font-weight="700">catalog services</text>
+    <text x="402" y="136" fill="#B6CCDE" font-size="17">sign-in · title · playback plan</text>
+    <rect x="290" y="324" width="225" height="116" rx="14" fill="#17364E" stroke="#FCD34D" stroke-width="3"/>
+    <text x="402" y="367" fill="#FCD34D" font-size="22" font-weight="700">Media preparation</text>
+    <text x="402" y="399" fill="#B6CCDE" font-size="18">quality versions</text>
+    <text x="402" y="424" fill="#B6CCDE" font-size="18">small video segments</text>
+    <rect x="602" y="324" width="210" height="116" rx="14" fill="#0B1B2B" stroke="#FCD34D" stroke-width="3"/>
+    <text x="707" y="367" fill="#FCD34D" font-size="22" font-weight="700">Origin storage</text>
+    <text x="707" y="402" fill="#B6CCDE" font-size="18">complete library</text>
+    <text x="707" y="426" fill="#B6CCDE" font-size="18">authoritative media</text>
+    <rect x="895" y="300" width="245" height="156" rx="14" fill="#17364E" stroke="#FCD34D" stroke-width="3"/>
+    <text x="1017" y="344" fill="#FCD34D" font-size="22" font-weight="700">Content delivery</text>
+    <text x="1017" y="373" fill="#FCD34D" font-size="22" font-weight="700">network (CDN)</text>
+    <text x="1017" y="410" fill="#B6CCDE" font-size="18">regional and nearby</text>
+    <text x="1017" y="435" fill="#B6CCDE" font-size="18">shared media copies</text>
+    <path d="M216 198 C246 177 260 125 282 106" fill="none" stroke="#5EEAD4" stroke-width="3" marker-end="url(#deck-s3-g1-c3a)"/>
+    <path d="M516 94 H575" fill="none" stroke="#5EEAD4" stroke-width="3" marker-end="url(#deck-s3-g1-c3a)"/>
+    <text x="546" y="80" fill="#B6CCDE" font-size="16">playback plan</text>
+    <path d="M215 261 C452 290 630 267 888 337" fill="none" stroke="#FCD34D" stroke-width="4" marker-end="url(#deck-s3-g1-c3b)"/>
+    <text x="575" y="278" fill="#FCD34D" font-size="18" font-weight="600">repeated segment requests</text>
+    <path d="M515 382 H594" fill="none" stroke="#FCD34D" stroke-width="3" marker-end="url(#deck-s3-g1-c3b)"/>
+    <path d="M813 382 H887" fill="none" stroke="#FCD34D" stroke-width="3" marker-end="url(#deck-s3-g1-c3b)"/>
+    <text x="850" y="368" fill="#B6CCDE" font-size="16">copy outward</text>
+    <text x="590" y="476" fill="#B6CCDE" font-size="18">The control path chooses what to play; the media path delivers the large files.</text>
+  </g>
+</svg></div><figcaption>Video-on-demand separates the catalog and account control path from the large shared media path</figcaption></figure></div></div>
+<div class="sources"><span class="sr-only">Sources: </span><ul><li>Course — <a href="../diagrams/video-on-demand.drawio">Editable streaming architecture diagram</a></li></ul></div>
+
+</section>
+<section class="slide slide--bullets" data-layout="bullets" data-phase="content" data-source-block="C" data-source-slide="4" data-title="What belongs in the shared streaming cache?" aria-label="Slide 4: What belongs in the shared streaming cache?">
+<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Video architectures</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>4</b> / 12</span></div>
+<div class="slide-body"><div class="fit"><h1>What belongs in the shared streaming cache?</h1>
 <ul>
-<li><strong>LCP</strong> — time to the largest visible element. Good is <strong>≤ 2.5 s</strong> at p75. Bad means slow origin, render-blocking CSS, or an unoptimized hero</li>
-<li><strong>INP</strong> — worst interaction to next paint. Good is <strong>≤ 200 ms</strong> at p75. Bad means long tasks on the main thread</li>
-<li><strong>CLS</strong> — unexpected layout movement. Good is <strong>≤ 0.1</strong>. Bad means unsized images, late banners, or a font swap</li>
+<li><strong>Strong candidates:</strong> title artwork, public catalog details, and prepared video segments</li>
+<li><strong>Usually short-lived:</strong> a playback plan or title availability that may change</li>
+<li><strong>Account-specific:</strong> watch history, recommendations, and continue-watching position</li>
+<li><strong>Not a cache policy:</strong> treating every response as public because most titles are public</li>
 </ul>
 
-<aside class="callout callout--danger" role="note"><p class="callout-head"><span class="ico" aria-hidden="true">■</span><span>This breaks production</span></p><p><strong>INP replaced FID in March 2024.</strong> If you learned First Input Delay, unlearn it.
-FID timed only the <em>delay before</em> the first handler ran — a page could score a
-perfect FID and still freeze for two seconds after every click.</p>
-</aside></div></div>
-<div class="sources"><span class="sr-only">Sources: </span><ul><li>web.dev — <a href="https://web.dev/articles/vitals">Core Web Vitals</a> · <a href="https://web.dev/articles/inp">INP</a> · Google — <a href="https://web.dev/blog/inp-cwv-launch">INP becomes a Core Web Vital</a></li></ul></div>
-
-</section>
-<section class="slide slide--bullets has-sources" data-layout="bullets" data-phase="content" data-source-block="C" data-source-slide="4" data-title="Lab and field answer different questions" aria-label="Slide 4: Lab and field answer different questions">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Measure and observe</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>4</b> / 26</span></div>
-<div class="slide-body"><div class="fit"><h1>Lab and field answer different questions</h1>
-<ul>
-<li><strong>Lab</strong> — Lighthouse, WebPageTest, your CI. One device, one network, <strong>reproducible</strong>, so you can A/B a change</li>
-<li><strong>Field</strong> — <code>web-vitals</code> in your own app. Every device and network, <strong>not reproducible</strong>: you cannot re-run Tuesday</li>
-<li>Lab gives you a <strong>diagnosis</strong> — which element, which script. Field gives you a <strong>verdict</strong> — is it bad, and for whom</li>
-</ul>
-
-<aside class="callout callout--warning" role="note"><p class="callout-head"><span class="ico" aria-hidden="true">▲</span><span>Watch out</span></p><p><strong>You will have no CrUX data, and that is correct.</strong> Chrome&#39;s public field
-dataset only covers origins above a popularity threshold. A project three people
-have visited will never qualify — the absence of data is a property of the
-dataset, not a defect in your site.</p>
-</aside></div></div>
-<div class="sources"><span class="sr-only">Sources: </span><ul><li>Chrome — <a href="https://developer.chrome.com/docs/crux/methodology#eligibility">CrUX methodology: eligibility</a></li></ul></div>
-
-</section>
-<section class="slide slide--terminal" data-layout="terminal" data-phase="content" data-source-block="C" data-source-slide="5" data-title="A budget is a number you agreed to fail" aria-label="Slide 5: A budget is a number you agreed to fail">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Measure and observe</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>5</b> / 26</span></div>
-<div class="slide-body"><div class="fit"><h1>A budget is a number you agreed to fail</h1>
-<figure class="codeblock codeblock--terminal" style="--code-size:21px"><figcaption><span>the same page, two delivery strategies — Lighthouse 13.4.1, mobile preset, 2026-08-15</span><span class="lang">console</span></figcaption><pre><code><span class="row">                        /slow      /fast    budget   verdict</span><span class="row">  Performance score        59        100         —</span><span class="row">  First Contentful Paint  0.8 s     0.6 s     1.8 s   pass / pass</span><span class="row">  Largest Contentful Pt   3.7 s     0.8 s     2.5 s   FAIL / pass</span><span class="row">  Total Blocking Time    2750 ms      0 ms    200 ms  FAIL / pass</span><span class="row">  Cumulative Layout Shift    0          0       0.1   pass / pass</span><span class="row">&nbsp;</span><span class="row">  Same HTML. Same image. Three delivery changes:</span><span class="row">    render-blocking CSS on a slow response -&gt; critical CSS inlined</span><span class="row">    unsized &lt;img&gt;                          -&gt; width/height + fetchpriority</span><span class="row">    700 ms synchronous script              -&gt; deferred, off critical path</span></code></pre></figure>
-<aside class="callout callout--key" role="note"><p class="callout-head"><span class="ico" aria-hidden="true">◆</span><span>Key idea</span></p><p>Same user-visible content. Only the resource scheduling and script execution
-changed. <strong>Delivery is a first-class engineering decision, not a deployment
-detail.</strong></p>
-</aside></div></div>
-
-
-</section>
-<section class="slide slide--terminal has-sources" data-layout="terminal" data-phase="content" data-source-block="C" data-source-slide="6" data-title="Windows: put both pages on screen and measure" aria-label="Slide 6: Windows: put both pages on screen and measure">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Measure and observe</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>6</b> / 26</span></div>
-<div class="slide-body"><div class="fit"><h1>Windows: put both pages on screen and measure</h1>
-<figure class="codeblock codeblock--terminal" style="--code-size:24px"><figcaption><span>PowerShell - repository root; Node 20+, no network needed</span><span class="lang">powershell</span></figcaption><pre><code><span class="row"><span class="hljs-built_in">Set-Location</span> .\weeks\week05\samples ; node origin.mjs  <span class="hljs-comment"># Terminal A</span></span><span class="row"><span class="hljs-variable">$o</span> = <span class="hljs-string">'http://127.0.0.1:8080'</span>                          <span class="hljs-comment"># Terminal B</span></span><span class="row">curl.exe <span class="hljs-literal">-sS</span> <span class="hljs-literal">--noproxy</span> <span class="hljs-string">'*'</span> <span class="hljs-literal">-o</span> NUL <span class="hljs-literal">-w</span> <span class="hljs-string">'%{http_code} '</span> <span class="hljs-string">&quot;</span><span class="hljs-variable">$o</span><span class="hljs-string">/slow&quot;</span></span><span class="row">curl.exe <span class="hljs-literal">-sS</span> <span class="hljs-literal">--noproxy</span> <span class="hljs-string">'*'</span> <span class="hljs-literal">-o</span> NUL <span class="hljs-literal">-w</span> <span class="hljs-string">&quot;%{http_code}`n&quot;</span> <span class="hljs-string">&quot;</span><span class="hljs-variable">$o</span><span class="hljs-string">/fast&quot;</span></span><span class="row"><span class="hljs-comment"># Expect: 200 200</span></span><span class="row"><span class="hljs-built_in">Start-Process</span> <span class="hljs-string">&quot;</span><span class="hljs-variable">$o</span><span class="hljs-string">/slow&quot;</span></span><span class="row"><span class="hljs-comment"># Then F12 &gt; Lighthouse &gt; Navigation + Mobile &gt; Analyze.</span></span><span class="row"><span class="hljs-comment"># Repeat on /fast. Cleanup: Ctrl+C Terminal A when done.</span></span></code></pre></figure></div></div>
-<div class="sources"><span class="sr-only">Sources: </span><ul><li>Course — <a href="../samples/origin.mjs"><code>/slow</code> and <code>/fast</code> handlers</a></li></ul></div>
-
-</section>
-<section class="slide slide--terminal has-sources" data-layout="terminal" data-phase="content" data-source-block="C" data-source-slide="7" data-title="macOS: put both pages on screen and measure" aria-label="Slide 7: macOS: put both pages on screen and measure">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Measure and observe</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>7</b> / 26</span></div>
-<div class="slide-body"><div class="fit"><h1>macOS: put both pages on screen and measure</h1>
-<figure class="codeblock codeblock--terminal" style="--code-size:24px"><figcaption><span>macOS Terminal (zsh or bash) - Node 20+, no network</span><span class="lang">bash</span></figcaption><pre><code><span class="row"><span class="hljs-built_in">cd</span> weeks/week05/samples &amp;&amp; node origin.mjs   <span class="hljs-comment"># Terminal A</span></span><span class="row">o=<span class="hljs-string">'http://127.0.0.1:8080'</span>                    <span class="hljs-comment"># Terminal B</span></span><span class="row">curl -sS --noproxy <span class="hljs-string">'*'</span> -o /dev/null -w <span class="hljs-string">'%{http_code} '</span> <span class="hljs-string">&quot;</span><span class="hljs-variable">$o</span><span class="hljs-string">/slow&quot;</span></span><span class="row">curl -sS --noproxy <span class="hljs-string">'*'</span> -o /dev/null -w <span class="hljs-string">'%{http_code}\n'</span> <span class="hljs-string">&quot;</span><span class="hljs-variable">$o</span><span class="hljs-string">/fast&quot;</span></span><span class="row"><span class="hljs-comment"># Expect: 200 200</span></span><span class="row">open <span class="hljs-string">&quot;</span><span class="hljs-variable">$o</span><span class="hljs-string">/slow&quot;</span></span><span class="row"><span class="hljs-comment"># Then Cmd+Opt+I &gt; Lighthouse &gt; Navigation + Mobile &gt; Analyze.</span></span><span class="row"><span class="hljs-comment"># Repeat on /fast. Cleanup: Ctrl-C Terminal A when done.</span></span></code></pre></figure></div></div>
-<div class="sources"><span class="sr-only">Sources: </span><ul><li>Course — <a href="../samples/origin.mjs"><code>/slow</code> and <code>/fast</code> handlers</a></li></ul></div>
-
-</section>
-<section class="slide slide--bullets" data-layout="bullets" data-phase="content" data-source-block="C" data-source-slide="8" data-title="Rendering strategy is a delivery decision, not a framework preference" aria-label="Slide 8: Rendering strategy is a delivery decision, not a framework preference">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Measure and observe</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>8</b> / 26</span></div>
-<div class="slide-body"><div class="fit"><h1>Rendering strategy is a delivery decision, not a framework preference</h1>
-<ul>
-<li><strong>CSR</strong> — cheapest origin; content waits on JS. The shell and assets still cache well, the <em>data</em> does not</li>
-<li><strong>SSR</strong> — content in the first response; costs origin work per request, <strong>and it is dynamic: mind the cache key</strong></li>
-<li><strong>SSG</strong> — no origin work, fully edge-cacheable, and stale until you rebuild</li>
-<li><strong>ISR</strong> — SSG&#39;s economics with a bounded staleness window</li>
-<li>Ask &quot;how fresh must this be, is it the same for everyone, and who pays for it?&quot; — that picks the strategy</li>
-</ul>
-
-<aside class="callout callout--key" role="note"><p class="callout-head"><span class="ico" aria-hidden="true">◆</span><span>Key idea</span></p><p>ISR is <code>stale-while-revalidate</code> implemented in your framework instead of your
-CDN. You already know the semantics; only the vendor changed.</p>
+<aside class="callout callout--key" role="note"><p class="callout-head"><span class="ico" aria-hidden="true">◆</span><span>Key idea</span></p><p>The media may be shared; the viewer&#39;s identity and viewing history are not.</p>
 </aside></div></div>
 
 
 </section>
-<section class="slide slide--section" data-layout="section" data-phase="content" data-source-block="C" data-source-slide="9" data-title="Accessibility" aria-label="Slide 9: Accessibility">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Measure and observe</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>9</b> / 26</span></div>
-<div class="slide-body"><div class="fit"><p class="kicker">The release gate people skip</p><div class="rule-accent" aria-hidden="true"></div><h1>Accessibility</h1>
-</div></div>
-
-
-</section>
-<section class="slide slide--terminal has-sources" data-layout="terminal" data-phase="content" data-source-block="C" data-source-slide="10" data-title="The scanner is clean-ish. The page is not usable" aria-label="Slide 10: The scanner is clean-ish. The page is not usable">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Measure and observe</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>10</b> / 26</span></div>
-<div class="slide-body"><div class="fit"><h1>The scanner is clean-ish. The page is not usable</h1>
-<figure class="codeblock codeblock--terminal" style="--code-size:23px"><figcaption><span>axe-core 4.12.1 against samples/origin.mjs /a11y — real output, 2026-08-15</span><span class="lang">console</span></figcaption><pre><code><span class="row"><span class="hljs-meta prompt_">$ </span><span class="language-bash">npx @axe-core/cli http://127.0.0.1:8080/a11y</span></span><span class="row">&nbsp;</span><span class="row">  Violation of &quot;color-contrast&quot; with 3 occurrences!</span><span class="row">  Violation of &quot;image-alt&quot;      with 1 occurrences!</span><span class="row">  Violation of &quot;tabindex&quot;       with 1 occurrences!</span><span class="row">&nbsp;</span><span class="row">  5 Accessibility issues detected.</span><span class="row">&nbsp;</span><span class="row">  Please note that only 20% to 50% of all accessibility issues can</span><span class="row">  automatically be detected. Manual testing is always required.</span></code></pre></figure>
-<aside class="callout callout--warning" role="note"><p class="callout-head"><span class="ico" aria-hidden="true">▲</span><span>Watch out</span></p><p>That last paragraph is printed by the axe CLI itself, unprompted. <strong>Deque ships
-their scanner with a disclaimer about their scanner.</strong> Read it as an
-instruction, not a footnote.</p>
-</aside></div></div>
-<div class="sources"><span class="sr-only">Sources: </span><ul><li>Deque — <a href="https://github.com/dequelabs/axe-core/blob/develop/doc/rule-descriptions.md">axe-core rule descriptions</a></li><li>W3C WAI — <a href="https://www.w3.org/WAI/WCAG22/quickref/">How to Meet WCAG 2.2</a></li></ul></div>
-
-</section>
-<section class="slide slide--demo has-sources" data-layout="demo" data-phase="content" data-source-block="C" data-source-slide="11" data-title="Demo: the scanner, then your hands off the mouse" aria-label="Slide 11: Demo: the scanner, then your hands off the mouse">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Measure and observe</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>11</b> / 26</span></div>
-<div class="slide-body"><div class="fit"><p class="demo-banner"><span aria-hidden="true">▶</span> Live demo</p>
-<h1>Demo: the scanner, then your hands off the mouse</h1>
-
-<div class="demo-grid">
-<div class="demo-col"><div class="demo-panel"><h3>Do this</h3><ol>
-<li>Origin running? <code>node origin.mjs</code> in <code>weeks/week05/samples</code></li>
-<li>Run the scanner. Read its own disclaimer aloud</li>
-<li>Click once into the page, then <strong>Tab, Enter, Escape</strong> only</li>
-</ol>
-</div></div>
-<div class="demo-col"><div class="demo-panel"><h3>Watch for</h3><ul>
-<li>3 rules found; Enter does nothing; focus invisible</li>
-</ul>
-</div><div class="demo-panel demo-panel--fallback"><h3>If it fails</h3><p>No Chrome? Do step 3 alone. See <code>lab.md</code> §5b.</p>
-</div></div>
-</div></div></div>
-<div class="sources"><span class="sr-only">Sources: </span><ul><li>Course — <a href="../samples/origin.mjs">the planted defects</a> · <a href="../lab.md">lab §5</a></li></ul></div>
-
-</section>
-<section class="slide slide--terminal has-sources" data-layout="terminal" data-phase="content" data-source-block="C" data-source-slide="12" data-title="Windows: run the scanner, then open the page" aria-label="Slide 12: Windows: run the scanner, then open the page">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Measure and observe</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>12</b> / 26</span></div>
-<div class="slide-body"><div class="fit"><h1>Windows: run the scanner, then open the page</h1>
-<figure class="codeblock codeblock--terminal" style="--code-size:23px"><figcaption><span>PowerShell - repo root; origin on 8080; Chrome at shown path</span><span class="lang">powershell</span></figcaption><pre><code><span class="row"><span class="hljs-variable">$a</span> = <span class="hljs-string">'http://127.0.0.1:8080/a11y'</span></span><span class="row"><span class="hljs-variable">$chrome</span> = <span class="hljs-built_in">Join-Path</span> <span class="hljs-variable">$env:ProgramFiles</span> <span class="hljs-string">'Google\Chrome\Application\chrome.exe'</span></span><span class="row">curl.exe <span class="hljs-literal">-sS</span> <span class="hljs-literal">--noproxy</span> <span class="hljs-string">'*'</span> <span class="hljs-literal">-o</span> NUL <span class="hljs-literal">-w</span> <span class="hljs-string">&quot;a11y=%{http_code}`n&quot;</span> <span class="hljs-variable">$a</span></span><span class="row"><span class="hljs-comment"># First npx use needs internet; adjust the browser path if necessary.</span></span><span class="row">npx <span class="hljs-literal">--yes</span> @axe<span class="hljs-literal">-core</span>/<span class="hljs-built_in">cli</span> <span class="hljs-literal">--version</span></span><span class="row">npx <span class="hljs-literal">--yes</span> @axe<span class="hljs-literal">-core</span>/<span class="hljs-built_in">cli</span> <span class="hljs-variable">$a</span> <span class="hljs-literal">--chrome-path</span> <span class="hljs-variable">$chrome</span></span><span class="row"><span class="hljs-built_in">Start-Process</span> <span class="hljs-literal">-FilePath</span> <span class="hljs-variable">$chrome</span> <span class="hljs-literal">-ArgumentList</span> <span class="hljs-variable">$a</span></span></code></pre></figure></div></div>
-<div class="sources"><span class="sr-only">Sources: </span><ul><li>Deque — <a href="https://github.com/dequelabs/axe-core-npm/tree/develop/packages/cli">axe-core CLI</a></li></ul></div>
-
-</section>
-<section class="slide slide--terminal has-sources" data-layout="terminal" data-phase="content" data-source-block="C" data-source-slide="13" data-title="macOS: run the scanner, then open the page" aria-label="Slide 13: macOS: run the scanner, then open the page">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Measure and observe</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>13</b> / 26</span></div>
-<div class="slide-body"><div class="fit"><h1>macOS: run the scanner, then open the page</h1>
-<figure class="codeblock codeblock--terminal" style="--code-size:24px"><figcaption><span>macOS Terminal - repo root; origin on 8080; Chrome installed</span><span class="lang">bash</span></figcaption><pre><code><span class="row">a=<span class="hljs-string">'http://127.0.0.1:8080/a11y'</span></span><span class="row">chrome_dir=<span class="hljs-string">'/Applications/Google Chrome.app/Contents/MacOS'</span></span><span class="row">chrome=<span class="hljs-string">&quot;</span><span class="hljs-variable">$chrome_dir</span><span class="hljs-string">/Google Chrome&quot;</span></span><span class="row">curl -sS --noproxy <span class="hljs-string">'*'</span> -o /dev/null -w <span class="hljs-string">'a11y=%{http_code}\n'</span> <span class="hljs-string">&quot;</span><span class="hljs-variable">$a</span><span class="hljs-string">&quot;</span></span><span class="row"><span class="hljs-comment"># First npx use needs internet; adjust the browser path if necessary.</span></span><span class="row">npx --<span class="hljs-built_in">yes</span> @axe-core/cli --version</span><span class="row">npx --<span class="hljs-built_in">yes</span> @axe-core/cli <span class="hljs-string">&quot;</span><span class="hljs-variable">$a</span><span class="hljs-string">&quot;</span> --chrome-path <span class="hljs-string">&quot;</span><span class="hljs-variable">$chrome</span><span class="hljs-string">&quot;</span></span><span class="row">open -a <span class="hljs-string">&quot;Google Chrome&quot;</span> <span class="hljs-string">&quot;</span><span class="hljs-variable">$a</span><span class="hljs-string">&quot;</span></span></code></pre></figure></div></div>
-<div class="sources"><span class="sr-only">Sources: </span><ul><li>Deque — <a href="https://github.com/dequelabs/axe-core-npm/tree/develop/packages/cli">axe-core CLI</a></li></ul></div>
-
-</section>
-<section class="slide slide--two-column" data-layout="two-column" data-phase="content" data-source-block="C" data-source-slide="14" data-title="The same page, keyboard only" aria-label="Slide 14: The same page, keyboard only">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Measure and observe</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>14</b> / 26</span></div>
-<div class="slide-body"><div class="fit"><h1>The same page, keyboard only</h1>
-<div class="cols"><div class="col"><h3>What axe reported</h3>
+<section class="slide slide--two-column has-sources" data-layout="two-column" data-phase="content" data-source-block="C" data-source-slide="5" data-title="Netflix and Disney+: a shared pattern, different delivery choices" aria-label="Slide 5: Netflix and Disney+: a shared pattern, different delivery choices">
+<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Video architectures</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>5</b> / 12</span></div>
+<div class="slide-body"><div class="fit"><h1>Netflix and Disney+: a shared pattern, different delivery choices</h1>
+<div class="cols"><div class="col"><h3>Netflix</h3>
 <ul>
-<li>3 low-contrast elements</li>
-<li>1 image with no <code>alt</code></li>
-<li>1 positive <code>tabindex</code></li>
+<li>Publishes the Open Connect program for placing content close to viewers</li>
+<li>Can pre-position popular titles ahead of expected demand</li>
+<li>A local copy absorbs repeated requests for the same prepared media</li>
+<li>Product services still handle identity, discovery, and playback decisions</li>
 </ul>
-<p>Lighthouse accessibility: <strong>80 / 100</strong></p>
-<p>The <code>label</code> rule <strong>passed</strong>, 2 nodes.</p>
-</div><div class="col"><h3>What Tab and Enter found</h3>
+</div><div class="col"><h3>Disney+</h3>
 <ul>
-<li>Focus is <strong>invisible</strong> — <code>:focus { outline: none }</code></li>
-<li>The Submit &quot;button&quot; is a <code>div</code> — <strong>Enter does nothing</strong></li>
-<li>The dialog ignores Escape and strands focus</li>
-<li>The &quot;label&quot; is a <strong>placeholder</strong>; it vanishes as you type</li>
+<li>Uses large-scale streaming delivery and multiple content delivery partners</li>
+<li>Can steer delivery among providers and regions as conditions change</li>
+<li>Shared media copies reduce repeated long-distance transfers</li>
+<li>Catalog and account services remain distinct from media delivery</li>
+</ul>
+</div></div></div></div>
+<div class="sources"><span class="sr-only">Sources: </span><ul><li>Netflix — <a href="https://openconnect.netflix.com/">Open Connect content delivery</a></li><li>Streaming Media — <a href="https://www.streamingmedia.com/Articles/ReadArticle.aspx?ArticleID=145721">Disney Streaming on multi-CDN load balancing</a></li></ul></div>
+
+</section>
+<section class="slide slide--svg has-sources" data-layout="svg" data-phase="content" data-source-block="C" data-source-slide="6" data-title="A meeting has a different path for every live conversation" aria-label="Slide 6: A meeting has a different path for every live conversation">
+<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Video architectures</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>6</b> / 12</span></div>
+<div class="slide-body"><div class="fit"><h1>A meeting has a different path for every live conversation</h1>
+<figure class="figure figure--plain"><div class="frame">
+<svg viewBox="0 0 1180 490" role="img" aria-label="High-level real-time meeting architecture. Two participants use a meeting application. Sign-in and meeting coordination services establish the meeting and select a media region. Each participant sends live audio and video to a nearby regional media relay, which forwards current streams to the other participants. Shared content delivery network copies are used for application files and help content, not as a store for live participant media.">
+  <defs>
+    <marker id="deck-s6-g1-c3c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#B6CCDE"/></marker>
+    <marker id="deck-s6-g1-c3d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#FCA5A5"/></marker>
+  </defs>
+  <g font-family="Segoe UI, sans-serif" text-anchor="middle">
+    <rect x="28" y="68" width="205" height="108" rx="14" fill="#17364E" stroke="#5EEAD4" stroke-width="3"/>
+    <text x="130" y="111" fill="#5EEAD4" font-size="22" font-weight="700">Participant A</text>
+    <text x="130" y="145" fill="#B6CCDE" font-size="18">meeting application</text>
+    <rect x="28" y="312" width="205" height="108" rx="14" fill="#17364E" stroke="#5EEAD4" stroke-width="3"/>
+    <text x="130" y="355" fill="#5EEAD4" font-size="22" font-weight="700">Participant B</text>
+    <text x="130" y="389" fill="#B6CCDE" font-size="18">meeting application</text>
+    <rect x="346" y="58" width="246" height="120" rx="14" fill="#17364E" stroke="#5EEAD4" stroke-width="3"/>
+    <text x="469" y="100" fill="#5EEAD4" font-size="21" font-weight="700">Sign-in and</text>
+    <text x="469" y="128" fill="#5EEAD4" font-size="21" font-weight="700">meeting control</text>
+    <text x="469" y="157" fill="#B6CCDE" font-size="17">membership · permissions</text>
+    <rect x="346" y="300" width="246" height="120" rx="14" fill="#17364E" stroke="#FCA5A5" stroke-width="3"/>
+    <text x="469" y="345" fill="#FCA5A5" font-size="22" font-weight="700">Regional media</text>
+    <text x="469" y="375" fill="#FCA5A5" font-size="22" font-weight="700">relay</text>
+    <text x="469" y="402" fill="#B6CCDE" font-size="17">forwards current streams</text>
+    <rect x="735" y="300" width="205" height="120" rx="14" fill="#17364E" stroke="#FCA5A5" stroke-width="3"/>
+    <text x="837" y="345" fill="#FCA5A5" font-size="21" font-weight="700">Meeting media</text>
+    <text x="837" y="375" fill="#B6CCDE" font-size="18">voice and camera</text>
+    <text x="837" y="402" fill="#B6CCDE" font-size="18">right now</text>
+    <rect x="965" y="58" width="190" height="120" rx="14" fill="#17364E" stroke="#FCD34D" stroke-width="3"/>
+    <text x="1060" y="103" fill="#FCD34D" font-size="20" font-weight="700">Shared edge</text>
+    <text x="1060" y="133" fill="#B6CCDE" font-size="17">app files · help</text>
+    <text x="1060" y="159" fill="#B6CCDE" font-size="17">not live media</text>
+    <path d="M234 100 H337" stroke="#5EEAD4" stroke-width="3" marker-end="url(#deck-s6-g1-c3c)"/>
+    <path d="M234 146 C285 174 304 218 341 326" fill="none" stroke="#FCA5A5" stroke-width="4" marker-end="url(#deck-s6-g1-c3d)"/>
+    <path d="M234 355 H338" stroke="#FCA5A5" stroke-width="4" marker-end="url(#deck-s6-g1-c3d)"/>
+    <path d="M592 360 H726" stroke="#FCA5A5" stroke-width="4" marker-end="url(#deck-s6-g1-c3d)"/>
+    <path d="M726 392 C623 465 345 468 235 394" fill="none" stroke="#FCA5A5" stroke-width="4" marker-end="url(#deck-s6-g1-c3d)"/>
+    <path d="M234 83 C470 10 770 10 957 84" fill="none" stroke="#FCD34D" stroke-width="3" marker-end="url(#deck-s6-g1-c3c)"/>
+    <text x="716" y="42" fill="#FCD34D" font-size="17">application downloads can be reused</text>
+    <text x="590" y="466" fill="#B6CCDE" font-size="18">Coordination sets up the conversation. The media relay carries the live exchange.</text>
+  </g>
+</svg></div><figcaption>Real-time meetings use shared application assets, but live participant media travels through low-latency relays</figcaption></figure></div></div>
+<div class="sources"><span class="sr-only">Sources: </span><ul><li>Course — <a href="../diagrams/real-time-meeting.drawio">Editable meeting architecture diagram</a></li></ul></div>
+
+</section>
+<section class="slide slide--table" data-layout="table" data-phase="content" data-source-block="C" data-source-slide="7" data-title="Why Zoom and Teams cannot treat a meeting like a movie" aria-label="Slide 7: Why Zoom and Teams cannot treat a meeting like a movie">
+<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Video architectures</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>7</b> / 12</span></div>
+<div class="slide-body"><div class="fit"><h1>Why Zoom and Teams cannot treat a meeting like a movie</h1>
+<div class="table-wrap"><table><thead><tr><th>Design question</th><th>Netflix or Disney+ library</th><th>Zoom or Microsoft Teams meeting</th></tr></thead><tbody><tr><td>Is the media available before playback?</td><td>Usually yes; prepared before a viewer presses play</td><td>No; participants create it as they speak</td></tr><tr><td>Can many people reuse the same media bytes?</td><td>Often yes; the title is shared</td><td>No; each participant&#39;s stream is unique to the meeting</td></tr><tr><td>What is the delivery priority?</td><td>Smooth playback, startup, and picture quality</td><td>Low delay, stable conversation, and clear speech</td></tr><tr><td>What can a shared edge cache well?</td><td>Artwork and prepared media segments</td><td>Application files and public resources</td></tr><tr><td>What carries live media?</td><td>A nearby copy can serve the prepared segment</td><td>A live relay forwards current participant streams</td></tr><tr><td>What happens when a copy is stale?</td><td>An older frame or title version may appear</td><td>Delayed speech makes conversation confusing</td></tr></tbody></table></div></div></div>
+
+
+</section>
+<section class="slide slide--two-column" data-layout="two-column" data-phase="content" data-source-block="C" data-source-slide="8" data-title="The middle ground: a live event broadcast" aria-label="Slide 8: The middle ground: a live event broadcast">
+<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Video architectures</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>8</b> / 12</span></div>
+<div class="slide-body"><div class="fit"><h1>The middle ground: a live event broadcast</h1>
+
+<aside class="callout callout--key" role="note"><p class="callout-head"><span class="ico" aria-hidden="true">◆</span><span>Key idea</span></p><p>A live broadcast uses shared distribution, but its freshness window is measured in moments—not hours.</p>
+</aside><div class="cols"><div class="col"><h3>Like a streaming library</h3>
+<ul>
+<li>One event feed reaches many viewers</li>
+<li>Regional edges distribute shared media</li>
+<li>Viewers can reuse recent segments</li>
+</ul>
+</div><div class="col"><h3>Unlike a movie library</h3>
+<ul>
+<li>New media is created continuously</li>
+<li>The newest segment must arrive quickly</li>
+<li>Long-lived copies show the past</li>
 </ul>
 </div></div></div></div>
 
 
 </section>
-<section class="slide slide--table has-sources" data-layout="table" data-phase="content" data-source-block="C" data-source-slide="15" data-title="The exact keystrokes, and what to watch for" aria-label="Slide 15: The exact keystrokes, and what to watch for">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Measure and observe</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>15</b> / 26</span></div>
-<div class="slide-body"><div class="fit"><h1>The exact keystrokes, and what to watch for</h1>
-<div class="table-wrap"><table><thead><tr><th>Press</th><th>On</th><th>Watch for</th></tr></thead><tbody><tr><td><code>Tab</code> ×1</td><td>from the address bar</td><td>Focus lands on &quot;Back to status&quot; — <strong>last</strong> visually</td></tr><tr><td><code>Tab</code> ×2</td><td>to Building code</td><td>The placeholder is the only label</td></tr><tr><td>any key</td><td>in Building code</td><td>The label is gone while you type</td></tr><tr><td><code>Enter</code></td><td>on <strong>Submit report</strong></td><td>Nothing happens — it is a <code>div</code></td></tr><tr><td>mouse, then <code>Escape</code></td><td>the help dialog</td><td>It stays open; focus never entered</td></tr></tbody></table></div></div></div>
-<div class="sources"><span class="sr-only">Sources: </span><ul><li>W3C WAI — <a href="https://www.w3.org/WAI/perspective-videos/keyboard/">Keyboard accessibility</a></li></ul></div>
-
-</section>
-<section class="slide slide--bullets" data-layout="bullets" data-phase="content" data-source-block="C" data-source-slide="16" data-title="What this page proves, and what it does not" aria-label="Slide 16: What this page proves, and what it does not">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Measure and observe</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>16</b> / 26</span></div>
-<div class="slide-body"><div class="fit"><h1>What this page proves, and what it does not</h1>
+<section class="slide slide--bullets" data-layout="bullets" data-phase="content" data-source-block="C" data-source-slide="9" data-title="Place caches where they help without changing the experience" aria-label="Slide 9: Place caches where they help without changing the experience">
+<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Video architectures</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>9</b> / 12</span></div>
+<div class="slide-body"><div class="fit"><h1>Place caches where they help without changing the experience</h1>
 <ul>
-<li><strong>Real:</strong> every defect above is a pattern that ships in production code, and the keyboard finds all of them</li>
-<li><strong>Real:</strong> the scanner&#39;s own printed disclaimer is its vendor&#39;s position, not ours</li>
-<li><strong>Fixture:</strong> the defect list is curated and documented — a real page has no answer key</li>
-<li><strong>Pinned:</strong> 3 rules / 5 occurrences is <strong>axe-core 4.12.1</strong>; a newer build may catch more, or fewer</li>
-<li><strong>Not a score:</strong> Lighthouse gave this page <strong>80 / 100</strong>, and a keyboard user cannot submit the form</li>
+<li><strong>Shared edge:</strong> prepared media, posters, and public application resources</li>
+<li><strong>Account services:</strong> personal lists and viewing history, partitioned by account</li>
+<li><strong>Meeting control:</strong> membership and room details, kept current for participants</li>
+<li><strong>Real-time media relays:</strong> forward live streams; do not replay an old shared copy</li>
+<li><strong>Recording archive:</strong> once a meeting ends, its recording becomes a stored asset with a different freshness policy</li>
 </ul>
-
-<aside class="callout callout--warning" role="note"><p class="callout-head"><span class="ico" aria-hidden="true">▲</span><span>Watch out</span></p><p>&quot;The scanner found nothing&quot; is not a result on your own app until you have
-also done the five-minute keyboard pass. The scan and the pass answer different
-questions.</p>
-</aside></div></div>
-
-
-</section>
-<section class="slide slide--bullets" data-layout="bullets" data-phase="content" data-source-block="C" data-source-slide="17" data-title="The five-minute keyboard pass, before every release" aria-label="Slide 17: The five-minute keyboard pass, before every release">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Measure and observe</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>17</b> / 26</span></div>
-<div class="slide-body"><div class="fit"><h1>The five-minute keyboard pass, before every release</h1>
-<ol>
-<li><strong>Tab from the top.</strong> Can you reach every control? Does the order match the visual order?</li>
-<li><strong>Can you see where you are?</strong> If the focus ring is invisible, stop. Everything after this is guesswork</li>
-<li><strong>Enter and Space</strong> on everything focusable. Does it do what clicking does?</li>
-<li><strong>Open a dialog.</strong> Does focus move in, stay in, leave on Escape, and return where it started?</li>
-<li><strong>Cause an error.</strong> Is it announced, associated with the field, and readable without colour?</li>
-</ol>
-
-<aside class="callout callout--tip" role="note"><p class="callout-head"><span class="ico" aria-hidden="true">✦</span><span>Tip</span></p><p>Five minutes, no tools, no install. It finds more real defects than any scanner
-you can buy, and you can run it on the pull request.</p>
-</aside></div></div>
-
-
-</section>
-<section class="slide slide--terminal has-sources" data-layout="terminal" data-phase="content" data-source-block="C" data-source-slide="18" data-title="Windows: the fallbacks, and stopping the origin" aria-label="Slide 18: Windows: the fallbacks, and stopping the origin">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Measure and observe</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>18</b> / 26</span></div>
-<div class="slide-body"><div class="fit"><h1>Windows: the fallbacks, and stopping the origin</h1>
-<figure class="codeblock codeblock--terminal" style="--code-size:24px"><figcaption><span>PowerShell - repository root</span><span class="lang">powershell</span></figcaption><pre><code><span class="row"><span class="hljs-built_in">Get-Content</span> .\weeks\week05\samples\k6<span class="hljs-literal">-baseline-summary</span>.txt</span><span class="row"><span class="hljs-built_in">Get-Content</span> .\weeks\week05\samples\campuspulse<span class="hljs-literal">-load-profile</span>.js</span><span class="row"><span class="hljs-comment"># Cleanup: Ctrl+C the origin in Terminal A, and close the tabs</span></span><span class="row"><span class="hljs-comment"># on /a11y, /slow and /fast. That is the whole cleanup.</span></span><span class="row"><span class="hljs-comment"># If 8080 looks busy, LOOK - never end what you did not start:</span></span><span class="row"><span class="hljs-built_in">Get-NetTCPConnection</span> <span class="hljs-literal">-LocalPort</span> <span class="hljs-number">8080</span> <span class="hljs-literal">-State</span> Listen <span class="hljs-literal">-EA</span> Ignore |</span><span class="row">  <span class="hljs-built_in">ForEach-Object</span> { <span class="hljs-built_in">Get-Process</span> <span class="hljs-literal">-Id</span> <span class="hljs-variable">$_</span>.OwningProcess }</span><span class="row"><span class="hljs-comment"># Busy port? Use the saved captures; leave other processes alone.</span></span></code></pre></figure></div></div>
-<div class="sources"><span class="sr-only">Sources: </span><ul><li>Course — <a href="../samples/k6-baseline-summary.txt">captured k6 baseline</a> · <a href="../samples/campuspulse-load-profile.js">load profile</a></li></ul></div>
-
-</section>
-<section class="slide slide--terminal has-sources" data-layout="terminal" data-phase="content" data-source-block="C" data-source-slide="19" data-title="macOS: the fallbacks, and stopping the origin" aria-label="Slide 19: macOS: the fallbacks, and stopping the origin">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Measure and observe</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>19</b> / 26</span></div>
-<div class="slide-body"><div class="fit"><h1>macOS: the fallbacks, and stopping the origin</h1>
-<figure class="codeblock codeblock--terminal" style="--code-size:24px"><figcaption><span>macOS Terminal (zsh or bash) - repository root</span><span class="lang">bash</span></figcaption><pre><code><span class="row">less weeks/week05/samples/k6-baseline-summary.txt      <span class="hljs-comment"># q quits</span></span><span class="row">less weeks/week05/samples/campuspulse-load-profile.js</span><span class="row"><span class="hljs-comment"># Cleanup: Ctrl-C the origin in Terminal A, and close the tabs</span></span><span class="row"><span class="hljs-comment"># on /a11y, /slow and /fast. That is the whole cleanup.</span></span><span class="row"><span class="hljs-comment"># If 8080 looks busy, LOOK - never end what you did not start:</span></span><span class="row">lsof -nP -iTCP:8080 -sTCP:LISTEN</span><span class="row"><span class="hljs-comment"># Busy port? Use the saved captures; leave other processes alone.</span></span></code></pre></figure></div></div>
-<div class="sources"><span class="sr-only">Sources: </span><ul><li>Course — <a href="../samples/k6-baseline-summary.txt">captured k6 baseline</a> · <a href="../samples/campuspulse-load-profile.js">load profile</a></li></ul></div>
-
-</section>
-<section class="slide slide--section" data-layout="section" data-phase="content" data-source-block="C" data-source-slide="20" data-title="Observability" aria-label="Slide 20: Observability">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Measure and observe</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>20</b> / 26</span></div>
-<div class="slide-body"><div class="fit"><p class="kicker">Knowing before your users tell you</p><div class="rule-accent" aria-hidden="true"></div><h1>Observability</h1>
 </div></div>
 
 
 </section>
-<section class="slide slide--bullets" data-layout="bullets" data-phase="content" data-source-block="C" data-source-slide="21" data-title="Three telemetry signals" aria-label="Slide 21: Three telemetry signals">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Measure and observe</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>21</b> / 26</span></div>
-<div class="slide-body"><div class="fit"><h1>Three telemetry signals</h1>
-<ul>
-<li><strong>Logs</strong> — what happened once, as structured JSON</li>
-<li><strong>Metrics</strong> — how often, how slow</li>
-<li><strong>Traces</strong> — where the time went</li>
-<li>Logs and traces join on <code>trace_id</code></li>
-<li>Metrics link to traces through exemplars — never put trace ids in metric labels</li>
-</ul>
-
-<aside class="callout callout--key" role="note"><p class="callout-head"><span class="ico" aria-hidden="true">◆</span><span>Key idea</span></p><p>The useful log field here is <code>&quot;cache&quot;:&quot;MISS&quot;</code>: it turns &quot;the API was slow&quot; into &quot;the edge missed.&quot;</p>
-</aside></div></div>
-
-
-</section>
-<section class="slide slide--bullets has-sources" data-layout="bullets" data-phase="content" data-source-block="C" data-source-slide="22" data-title="An SLO is a sentence about users. A dashboard is not" aria-label="Slide 22: An SLO is a sentence about users. A dashboard is not">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Measure and observe</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>22</b> / 26</span></div>
-<div class="slide-body"><div class="fit"><h1>An SLO is a sentence about users. A dashboard is not</h1>
-<ul>
-<li><strong>SLI</strong> — the measurement. <em>&quot;Proportion of <code>/api/status</code> requests served in under 500 ms&quot;</em></li>
-<li><strong>SLO</strong> — the target over a window. <em>&quot;99% of those, over 28 days&quot;</em></li>
-<li><strong>Error budget</strong> — what the SLO permits you to lose: <strong>1% of eligible requests</strong></li>
-<li>Time-based instead? <em>&quot;99% of one-minute windows are good&quot;</em> — 1% of 28 days is <strong>6 h 43 m</strong></li>
-<li><strong>Alert on the SLI burning the budget</strong> — not on CPU, not on a single 500</li>
-</ul>
-
-<aside class="callout callout--danger" role="note"><p class="callout-head"><span class="ico" aria-hidden="true">■</span><span>This breaks production</span></p><p>An alert that fires when nothing is wrong trains people to ignore it. The next
-one is real, and by then nobody looks. <strong>Alert fatigue is a design failure, not
-a discipline failure.</strong></p>
-</aside></div></div>
-<div class="sources"><span class="sr-only">Sources: </span><ul><li>Google SRE — <a href="https://sre.google/sre-book/service-level-objectives/">Service Level Objectives</a> · <a href="https://sre.google/workbook/alerting-on-slos/">Alerting on SLOs</a></li></ul></div>
-
-</section>
-<section class="slide slide--checkpoint has-sources" data-layout="checkpoint" data-phase="content" data-source-block="C" data-source-slide="23" data-title="Your status page renders in 900 ms but nobody can submit a report. What tells you?" aria-label="Slide 23: Your status page renders in 900 ms but nobody can submit a report. What tells you?">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Measure and observe</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>23</b> / 26</span></div>
+<section class="slide slide--checkpoint" data-layout="checkpoint" data-phase="practice" data-source-block="C" data-source-slide="10" data-title="Sketch the right delivery for a championship final" aria-label="Slide 10: Sketch the right delivery for a championship final">
+<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Individual practice</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>10</b> / 12</span></div>
 <div class="slide-body"><div class="fit"><p class="cp-banner"><span aria-hidden="true">◇</span> Active checkpoint</p>
-<h1>Your status page renders in 900 ms but nobody can submit a report. What tells you?</h1>
+<h1>Sketch the right delivery for a championship final</h1>
 
-<div class="cp-meta"><span><b>10 min</b></span><span>Individual silent write (4 min) → write one SLO on paper (2 min) → cold call (4 min)</span></div>
+<div class="cp-meta"><span><b>6 min</b></span><span>Teams (3 min) → report back (2 min) → debrief (1 min)</span></div>
+<p>A service offers a recorded replay, a live broadcast, and a private watch party with voice chat.</p>
 <ol>
-<li>Lighthouse in CI — scored 98 this morning</li>
-<li>An <code>axe</code> run in the pipeline — zero violations</li>
-<li>A metric: <code>http_requests_total{route=&quot;/incidents&quot;,status=&quot;2xx&quot;}</code></li>
-<li>An uptime check hitting <code>/healthz</code> every 60 s</li>
+<li>Which pieces can use a shared edge copy?</li>
+<li>Which requests must be personal or permission-checked?</li>
+<li>Which traffic must be routed live rather than served from a saved copy?</li>
+<li>What changes after the event ends?</li>
 </ol>
 </div></div>
-<div class="sources"><span class="sr-only">Sources: </span><ul><li>Google SRE — <a href="https://sre.google/sre-book/service-level-objectives/">Service Level Objectives</a></li></ul></div>
+
 
 </section>
-<section class="slide slide--table has-sources" data-layout="table" data-phase="practice" data-source-block="C" data-source-slide="24" data-title="Individual lab: cache and experience" aria-label="Slide 24: Individual lab: cache and experience">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Individual practice</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>24</b> / 26</span></div>
-<div class="slide-body"><div class="fit"><h1>Individual lab: cache and experience</h1>
-<p><strong>Core: 30 min + 5 min recovery. Parts 1 and 3 are optional.</strong></p>
-<div class="table-wrap"><table><thead><tr><th>Part</th><th>Focus</th><th style="text-align:right">Min</th></tr></thead><tbody><tr><td>0</td><td>Two terminals, two synthetic accounts</td><td style="text-align:right">3</td></tr><tr><td>2</td><td>Observe all four cache states</td><td style="text-align:right">8</td></tr><tr><td>4</td><td>Test account-page isolation</td><td style="text-align:right">7</td></tr><tr><td>5</td><td><code>axe</code> plus keyboard access</td><td style="text-align:right">7</td></tr><tr><td>6</td><td>One SLI, SLO, and alert</td><td style="text-align:right">5</td></tr></tbody></table></div></div></div>
-<div class="sources"><span class="sr-only">Sources: </span><ul><li>Course — <a href="../lab.md">Week 5 lab: full commands, expected output, and troubleshooting</a></li></ul></div>
-
-</section>
-<section class="slide slide--bullets" data-layout="bullets" data-phase="homework" data-source-block="C" data-source-slide="25" data-title="HW5 — Own the Edge" aria-label="Slide 25: HW5 — Own the Edge">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Homework brief</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>25</b> / 26</span></div>
-<div class="slide-body"><div class="fit"><h1>HW5 — Own the Edge</h1>
+<section class="slide slide--bullets" data-layout="bullets" data-phase="homework" data-source-block="C" data-source-slide="11" data-title="A high-level architecture sketch for your own app" aria-label="Slide 11: A high-level architecture sketch for your own app">
+<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Homework brief</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>11</b> / 12</span></div>
+<div class="slide-body"><div class="fit"><h1>A high-level architecture sketch for your own app</h1>
 <ul>
-<li>Put a CDN in front of your domain and build a <strong>cache-policy matrix</strong>: at least
-<strong>six content classes</strong>, each with its layer, key, invalidation, and rationale</li>
-<li>Implement <strong>one app-layer cache</strong> (cache-aside, Redis or memory) with HIT/MISS evidence</li>
-<li>Prove all four cache states, and reproduce <strong>and revert</strong> a cache-poisoning near-miss</li>
-<li>Measure against a stated performance budget and pilot your own <strong>RUM</strong> with <code>web-vitals</code></li>
-<li>Run <code>axe</code> <strong>and</strong> record a keyboard-only walkthrough that finds <strong>≥ 1 defect the scan missed</strong></li>
-<li>Stand up one SLI, one SLO, and one alert that has <strong>actually fired</strong></li>
+<li>Choose a feature that serves the same content to many people</li>
+<li>Draw the viewer, shared edge, application services, and source data</li>
+<li>Mark one personal-data path that must not become a shared copy</li>
+<li>State one freshness promise and what product risk it protects against</li>
+</ul>
+</div></div>
+
+
+</section>
+<section class="slide slide--bullets" data-layout="bullets" data-phase="closing" data-source-block="C" data-source-slide="12" data-title="One product can contain several delivery architectures" aria-label="Slide 12: One product can contain several delivery architectures">
+<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Closing logistics</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>12</b> / 12</span></div>
+<div class="slide-body"><div class="fit"><h1>One product can contain several delivery architectures</h1>
+<ul>
+<li><strong>Library playback:</strong> cache prepared media close to many viewers</li>
+<li><strong>Live broadcast:</strong> distribute shared media with a short freshness window</li>
+<li><strong>Meeting conversation:</strong> route unique, current streams through low-delay relays</li>
+<li><strong>Account experience:</strong> keep personal data separate from all shared media copies</li>
 </ul>
 
-<aside class="callout callout--key" role="note"><p class="callout-head"><span class="ico" aria-hidden="true">◆</span><span>Key idea</span></p><p>100 points · individual · due at the start of Week 6, before the midterm. This is
-Gate 3 — Delivered and observable. Full handout: <a href="../homework.md"><code>homework.md</code></a>.</p>
+<aside class="callout callout--key" role="note"><p class="callout-head"><span class="ico" aria-hidden="true">◆</span><span>Key idea</span></p><p>Ask what can be reused, by whom, and for how long. Those answers shape the architecture.</p>
 </aside></div></div>
-
-
-</section>
-<section class="slide slide--two-column" data-layout="two-column" data-phase="closing" data-source-block="C" data-source-slide="26" data-title="Before you leave" aria-label="Slide 26: Before you leave">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·C</b> &nbsp;Closing logistics</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>26</b> / 26</span></div>
-<div class="slide-body"><div class="fit"><h1>Before you leave</h1>
-<div class="cols"><div class="col"><h3>Released today</h3>
-<ul>
-<li>The <a href="../../../midterm/blueprint.md">midterm blueprint</a> and a
-<a href="../../../midterm/practice-case.md">practice forensic case</a></li>
-<li><strong>The midterm is Week 6.</strong> Sit the practice case <strong>this week</strong>, closed-book and
-timed, while Weeks 1–5 are still warm</li>
-<li>Also complete the <a href="../../week06/prep.md">Week 6 prep</a> before class</li>
-</ul>
-</div><div class="col"><h3>Exit ticket — one line</h3>
-<ul>
-<li>Write one SLO for a feature on your own project, in the form: <em>&quot;X% of &lt;action&gt;
-complete in under Y, measured over Z days.&quot;</em></li>
-</ul>
-</div></div></div></div>
 
 
 </section>
@@ -1581,7 +1487,7 @@ complete in under Y, measured over Z days.&quot;</em></li>
 </div>
 
 <div class="overlay" id="overview" aria-hidden="true" aria-label="Slide overview">
-  <h2>Overview — Measuring the human experience — and knowing when it breaks</h2>
+  <h2>Overview — Two kinds of video, two caching architectures</h2>
   <div class="ov-grid" id="ov-grid"></div>
 </div>
 

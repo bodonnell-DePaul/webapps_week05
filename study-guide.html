@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CSC 436 midterm study guide - CSC 436</title>
+<link rel="stylesheet" href="../assets/course.css">
+<link rel="icon" type="image/svg+xml" href="../assets/course-icon.svg">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header><a class="course-name" href="../index.html">CSC 436</a>
+<nav aria-label="Course">
+<a href="../docs/getting-started.html">Start here</a>
+<a href="../docs/new_syllabus.html">Syllabus</a>
+<a href="../docs/course-map.html">Course map</a>
+<a href="../final-project/index.html">Final project</a>
+</nav></header>
+<main id="main">
+<p class="source-link"><a href="study-guide.md" download>Download Markdown source</a></p>
+<h1 id="csc-436-midterm-study-guide">CSC 436 midterm study guide</h1>
+<p>The Week 6 midterm covers <strong>Weeks 1–5 only</strong>. It is a 120-minute,
+individual, open-notes/offline exam. Bring printed/offline course notes and
+your own HW1–HW5 submissions/feedback. No internet, generative AI,
+collaboration, live commands or cloud access. Devices are stored unless
+approved for an accommodation.</p>
+<p><strong>Study as a web application developer, not a network engineer.</strong> You should
+explain how the pieces fit together, make sensible implementation and delivery
+choices, recognize common mistakes, and describe checks that show an app works
+for its users. You will not reconstruct incidents from DNS traces, packet
+captures, TLS dumps or large log bundles. Exact command flags, vendor
+statistics and memorized header spelling are not required.</p>
+<h2 id="format-and-answer-approach">Format and answer approach</h2>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Section</th><th style="text-align:right">Points</th><th style="text-align:right">Suggested minutes</th><th>Task</th></tr></thead><tbody><tr><td>A — Practical foundations</td><td style="text-align:right">20</td><td style="text-align:right">20</td><td>Four sets of five multiple-choice items (20 items) on Weeks 1–4 concepts</td></tr><tr><td>B — Application scenarios</td><td style="text-align:right">60</td><td style="text-align:right">66</td><td>Three small web-app scenarios, 20 points each (four 5-point parts)</td></tr><tr><td>C — CDN and server-side caching architecture</td><td style="text-align:right">20</td><td style="text-align:right">22</td><td>One scenario in four parts: edge/PoP delivery, streaming control vs data plane, cache keys and private data, app-layer caching</td></tr><tr><td>Reading/review</td><td style="text-align:right">0</td><td style="text-align:right">10</td><td>Check parts, units and answers</td></tr></tbody></table></div>
+<p>Section A is multiple choice: pick the single best answer. For Sections B and C, use <strong>choice → reason → expected behavior → check</strong> when a question asks for
+a decision. A concept explanation does not need an invented test or citation.
+Short code, diagrams and bullets are welcome; no full program is required.
+Questions state exactly what to give (a list, a number, a yes/no with a
+reason, an ordered sequence); answer each lettered or numbered ask separately.
+For arithmetic, show the setup and units. Practice using your notes, not
+copying paragraphs that do not address the scenario.</p>
+<h2 id="week-1--getting-a-web-request-to-the-app">Week 1 — Getting a web request to the app</h2>
+<p>Review <a href="../weeks/week01/index.html">Week 1</a>, its
+<a href="../weeks/week01/reference.html">reference</a>, <a href="../weeks/week01/lab.html">lab</a>,
+<a href="../weeks/week01/homework.html">HW1</a>, and
+<a href="../docs/web-foundations.html">web foundations</a>.</p>
+<h3 id="practical-knowledge">Practical knowledge</h3>
+<ul>
+<li>Explain browser/client, server process, IP address and port as different jobs.</li>
+<li>Follow URL → DNS → transport → TLS → HTTP → browser rendering. Cached data
+or reused connections can skip work; a painted page does not prove the API
+and controls work.</li>
+<li>DHCP supplies a lease and settings such as address, prefix, gateway and
+resolver. The gateway routes; NAT can translate addresses/ports. DHCP and
+NAT are not the same service even if one router does both.</li>
+<li>A prefix tells you which addresses are on the local subnet. For
+<code>192.168.40.20/24</code>, the first 24 bits are the network portion; another
+ordinary <code>192.168.40.*</code> host is in that subnet.</li>
+<li>Loopback (<code>127.0.0.1</code>, <code>::1</code>) refers to the current machine.
+<code>0.0.0.0</code> is a wildcard IPv4 listener, not an address to give a browser.
+Sharing a demo needs an appropriate listener AND permitted network access.</li>
+<li>Private addresses are not directly public destinations. NAT is not
+authentication and does not automatically publish an inbound service.</li>
+<li>TCP provides a reliable ordered stream; raw UDP does not. QUIC adds
+reliability and encryption over UDP.</li>
+<li>Refusal means an active rejection; timeout means the deadline expired;
+reset means an established conversation was aborted. These symptoms alone
+do not identify a unique cause. Ping is not proof a web service works.</li>
+</ul>
+<p><strong>Worked example:</strong> an app listens on <code>127.0.0.1:5173</code>. A classmate cannot
+reach it through your LAN address. For an authorized same-LAN demo, bind to the
+LAN interface or wildcard, permit only the needed LAN access, and have the
+classmate load the expected page using your LAN address and port. Do not
+disable the firewall or publish an unsecured development server.</p>
+<p><strong>Worked example (URL to page):</strong> for <code>https://status.example.edu</code>: DNS gives
+an address; TCP/QUIC opens a connection; TLS checks the name and encrypts;
+HTTP requests and returns the page; the browser renders it. TCP guarantees
+ordered, retransmitted delivery; QUIC provides this over UDP, so HTTP/3 pages
+do not arrive with missing data.</p>
+<p><strong>Practice:</strong> explain what each URL-to-page stage contributes; describe a
+safe local demo; distinguish DHCP, gateway and NAT without configuring routers.</p>
+<h2 id="week-2--names-dns-changes-and-http-contracts">Week 2 — Names, DNS changes and HTTP contracts</h2>
+<p>Review <a href="../weeks/week02/index.html">Week 2</a>, its
+<a href="../weeks/week02/reference.html">reference</a>, <a href="../weeks/week02/lab.html">lab</a>
+and <a href="../weeks/week02/homework.html">HW2</a>.</p>
+<h3 id="practical-knowledge-1">Practical knowledge</h3>
+<ul>
+<li>A stub asks a recursive resolver; the resolver caches and, when needed,
+follows root → TLD → authoritative referrals. Authoritative servers serve
+the zone data. Not every lookup visits every server.</li>
+<li>Distinguish registrant, registrar, registry, DNS host and application host.
+Record edits belong at the DNS host; parent delegation changes belong at
+the registrar/parent administrator. They can be different companies.</li>
+<li>Choose A/AAAA for addresses, CNAME for a hostname alias, TXT for non-secret
+verification, MX for mail, NS for authority/delegation, and CAA for CA
+issuance restrictions. Recognize SOA as zone metadata. SRV and DNSSEC are
+recognition-level only.</li>
+<li>A record is not a URL: it does not carry <code>https://</code>, an app route or an
+arbitrary port. An ordinary CNAME cannot be placed at an apex that needs
+NS/SOA; provider flattening is a separate feature.</li>
+<li>TTL permits cached reuse. Two people can legitimately get different
+answers during a move, with deliberate geo steering, or with split DNS.
+Neither different answers nor SOA serials alone proves a fault.</li>
+<li>Plan a move: record old target/rollback; lower TTL ahead of time; wait out
+the previous TTL; change target; check DNS and app behavior; retain the old
+service through cache overlap. Negative results can also be cached.</li>
+<li>Explain method, path, headers, body, status and content type. GET reads;
+POST commonly creates; PUT replaces; PATCH partially updates; DELETE
+removes. Know safe versus idempotent at a practical level.</li>
+<li>Recognize 2xx success, 3xx redirect, 4xx request/client problem, 5xx
+server/upstream problem. Creation can require 201 + Location; invalid
+input 400; missing resource 404. 307/308 preserve method/body across a
+redirect; 301/302 may change a POST to GET.</li>
+<li>Host selects a virtual host. Only trust forwarded scheme/address headers
+through a configured trusted proxy that overwrites untrusted values.</li>
+</ul>
+<p><strong>Worked example (connecting a domain):</strong> the host says to point
+<code>status.example.edu</code> at <code>app.host.example</code> and publish <code>verify=abc123</code>: use a
+CNAME and a TXT record, edited at whoever manages the DNS zone. The registrar
+separately registers the domain and delegates it to name servers. A record
+cannot hold <code>https://app.host.example:3000/dashboard</code> because DNS stores
+hosts/addresses/text, not scheme, port or path.</p>
+<p><strong>Worked example:</strong> old TTL is one hour. Changing it to one minute at noon
+does not shorten a one-hour entry already cached at 11:59. Lower it early,
+wait the old lifetime before the move, and keep the old host available for
+overlap and rollback.</p>
+<p><strong>Practice:</strong> choose records for a host&#39;s deployment instructions; identify
+who can change them; outline a safe move; choose a method and response for an
+API action. No delegation-trace reconstruction is required.</p>
+<h2 id="week-3--react-and-typescript-correctness">Week 3 — React and TypeScript correctness</h2>
+<p>Review <a href="../weeks/week03/index.html">Week 3</a>, its
+<a href="../weeks/week03/reference.html">reference</a>, <a href="../weeks/week03/lab.html">lab</a>,
+<a href="../weeks/week03/homework.html">HW3</a> and <a href="../weeks/week03/samples/index.html">samples</a>.</p>
+<h3 id="practical-knowledge-2">Practical knowledge</h3>
+<ul>
+<li>Render from props/state/context snapshots. Props are read-only; children
+request changes through callbacks. Context distributes a provider&#39;s value.</li>
+<li>Recognize TSX expressions, typed props, stable list keys and event handlers
+passed as functions. Avoid index keys for editable/reordered records.</li>
+<li>Controlled inputs take their value from state and update it through events.
+Keep state at the common owner that needs it.</li>
+<li>When next state depends on previous state, use a functional updater.
+Update arrays/objects immutably. Reducers organize related transitions;
+custom hooks reuse behavior, not automatically shared state.</li>
+<li>A dependency array controls when an effect runs: <code>[zone]</code> after the first render and whenever <code>zone</code> changes; <code>[]</code> only once after the first render; no array after every render (a state-setting effect then loops).</li>
+<li>Effects synchronize with external systems, not ordinary derived values.
+Dependencies describe when to synchronize again. Clean up timers/listeners
+and abort or ignore obsolete fetches. An effect that starts a timer
+(<code>setInterval</code>) must <strong>return a cleanup function</strong> that stops it
+(<code>return () =&gt; clearInterval(id)</code>); React runs it before the next run of the
+effect and on unmount, so timers do not pile up or keep running after the
+component is gone. Show loading/error/empty states
+deliberately; an old response must not overwrite newer selections.</li>
+<li>TypeScript checks source contracts, not imported CSV/JSON bytes. <code>as</code>
+does not validate; decode/narrow before accepting external records.
+Required fields, allowed statuses and numeric conversions need runtime checks.</li>
+<li>Apply every filter, calculate summaries over <strong>all matches</strong>, copy and sort,
+then page. <code>useMemo</code> can cache pure derived work; it does not make bad
+dependencies or wrong input arrays correct.</li>
+<li>Unknown hours (<code>null</code> after normalization) differ from known numeric zero.
+In HW3, reset clears filters but preserves sort, and export includes all
+matching normalized rows, not just the current page.</li>
+</ul>
+<p><strong>Worked examples:</strong></p>
+<pre><code class="language-tsx">setCount(c =&gt; c + 1); // next value depends on the previous value
+
+const matches = tickets.filter(matchesControls);
+const metrics = summarize(matches);
+const page = [...matches].sort(compare).slice(0, pageSize);
+</code></pre>
+<p>With matching open estimates <code>4</code>, blank and <code>0</code>: known total is <strong>4</strong>, known
+count <strong>2</strong>, unknown count <strong>1</strong>. A one-row page does not change these totals. Three calls of
+<code>setCount(count + 1)</code> from <code>count = 0</code> show <strong>1</strong>; three functional updates
+show <strong>3</strong>. For a CSV row: blank ID or unsupported status → reject/report;
+blank hours → unknown; <code>0</code> → known zero.</p>
+<p><strong>Worked example (reusable filter):</strong> the parent owns <code>query</code> and passes
+<code>value={query}</code> and <code>onChange={setQuery}</code> to the input; typing fires the event,
+the handler calls <code>setQuery</code>, the parent re-renders. Compute matches during
+render; do not store them in a second state. Two components calling the same
+custom hook each get their own state unless it is lifted or put in context.</p>
+<p><strong>Practice:</strong> compute a tiny filtered summary; explain three updates from one
+snapshot; describe fetch race handling; design invalid-import feedback. A green
+build alone does not demonstrate correct interactions.</p>
+<h2 id="week-4--browserapi-integration-and-trusted-delivery">Week 4 — Browser/API integration and trusted delivery</h2>
+<p>Review <a href="../weeks/week04/index.html">Week 4</a>, its
+<a href="../weeks/week04/reference.html">reference</a>, <a href="../weeks/week04/lab.html">lab</a>,
+<a href="../weeks/week04/homework.html">HW4</a> and the
+<a href="../docs/deployment-runbook.html">deployment runbook</a>.</p>
+<h3 id="practical-knowledge-3">Practical knowledge</h3>
+<ul>
+<li>HTTP/1.1 commonly uses multiple connections for concurrency; HTTP/2
+multiplexes over TCP; HTTP/3 uses QUIC and independent stream delivery.
+HTTP meanings stay the same. Advertisement of h3 is not proof it was used,
+and newer versions are not automatic performance fixes.</li>
+<li>HTTPS protects transit and validates the server&#39;s name/trust; it does not
+authorize a user or prove the site is honest. Certificates are public;
+private keys remain secret. Know the client checks hostname/SAN, validity
+and chain to a trusted root; the server normally supplies intermediates.</li>
+<li>Repair wrong-name, expired or incomplete-chain configurations rather than
+turning off validation. Identify renewal ownership and expiry monitoring.</li>
+<li>Centralize axios base URL, timeout, endpoint functions and consistent error
+handling. HTTP errors have responses; network failures lack one; timeouts
+and cancellations need different user treatment from invalid fields.</li>
+<li>Express middleware order matters: CORS/preflight, JSON parsing, routes
+with validation before writes, consistent error handling after routes.
+Validate server inputs even if a controlled form already validates.</li>
+<li>CORS is enforced by the browser, not curl: a request that works from curl or Postman can still be blocked in the browser, because only browsers apply the rule; curl never asks permission. Origin includes scheme, host
+and port. Preflight checks method and requested headers. Credentialed
+requests need an exact allowed origin and credential permission, not <code>*</code>.
+Expose a non-safelisted response header such as Location when JS needs it.
+CORS is not authentication/authorization.</li>
+<li>Release checks include ordinary trusted HTTPS, functional API/page behavior,
+exact release identity, health and a known-good rollback. Do not treat a
+running process as proof the desired release works.</li>
+</ul>
+<p><strong>Worked example (HTTPS and versions):</strong> “HTTP/3 means new status codes” is
+false (methods and statuses are unchanged; only transport framing differs).
+“The padlock means the user is authorized” is false (it shows server identity
+and protected transit only).</p>
+<p><strong>Worked example:</strong> for a credentialed JSON POST from
+<code>https://workbench.example</code> to <code>https://api.example/api/incidents</code>, send:</p>
+<pre><code class="language-text">Access-Control-Allow-Origin: https://workbench.example   (not *)
+Access-Control-Allow-Credentials: true
+Access-Control-Allow-Methods: POST
+Access-Control-Allow-Headers: Content-Type
+Access-Control-Expose-Headers: Location
+</code></pre>
+<p>Express order: CORS/preflight → JSON parsing → validation → create → error
+handler. Success is 201 + created object + Location; invalid input is 400 with
+a code, message and field errors. The API must still authorize the request.
+Certificate pre-release checks: name match, valid dates, chain to a trusted
+root; plus renewal monitoring and a rollback step.</p>
+<p><strong>Practice:</strong> explain a browser/curl difference without analyzing a capture;
+design success/validation/error responses; describe a TLS renewal and release
+safeguard. No certificate-dump interpretation is required.</p>
+<h2 id="week-5--global-delivery-caching-and-user-experience">Week 5 — Global delivery, caching and user experience</h2>
+<p>Review the reworked <a href="../weeks/week05/index.html">Week 5</a>,
+<a href="../weeks/week05/reference.html">reference</a>, <a href="../weeks/week05/lab.html">lab</a>,
+<a href="../weeks/week05/homework.html">HW5</a> and the
+<a href="../weeks/week05/samples/react-node-cache/index.html">React/Node caching sample</a>.</p>
+<h3 id="global-delivery-and-streaming">Global delivery and streaming</h3>
+<ul>
+<li>CDN PoPs put delivery close to users and reduce repeated origin work.
+Anycast or DNS steering selects an appropriate PoP; caches differ by
+location. Shield/tier caches reduce repeated origin fetches. Edge TLS,
+compression, image processing and protection can help even on uncached routes.</li>
+<li>Streaming control plane handles sign-in, profiles, personalized rows,
+server selection, search, resume lists and licence/DRM keys for a specific
+user (all per-user or decision-making, so control plane). Data plane
+delivers encoded video segments listed by manifests. A finished video&#39;s
+manifest and segments never change, so they are static and cacheable.</li>
+<li>The <strong>ladder</strong> is the set of versions of each title encoded at different
+bitrates/resolutions. ABR (adaptive bitrate) lets the player measure its
+throughput and pick a lower or higher rung of the ladder for each
+subsequent segment as conditions change, so a slowing network gives lower
+quality instead of stalling.</li>
+<li>Netflix Open Connect puts appliances in ISPs/IXPs and can pre-fill popular
+recorded content off-peak. Disney+/Max illustrate multi-CDN delivery for
+quality and resilience. Know the reasons, not vendor statistics.</li>
+<li>ISP-local copies reduce transit and distance but do not eliminate the last
+mile. Live segments cannot be filled before they exist: use short-lived
+manifests, long-lived immutable segments, shields and request collapsing.
+Personalized rows and per-user licence responses are not shared public data.</li>
+</ul>
+<h3 id="layered-caching-and-practical-policies">Layered caching and practical policies</h3>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Layer</th><th>Useful for</th><th>Update mechanism</th></tr></thead><tbody><tr><td>React query cache</td><td>Avoid repeat fetching during navigation</td><td>Invalidate/refetch after writes</td></tr><tr><td>Service worker</td><td>Offline/repeat visits</td><td>Explicit strategy and worker version; avoid pinning old shell</td></tr><tr><td>Browser HTTP cache</td><td>Assets across visits</td><td>Lifetime, validation, new versioned URL</td></tr><tr><td>CDN/shared edge</td><td>Public bytes across users</td><td>TTL, purge, new URL</td></tr><tr><td>Reverse proxy</td><td>Shield app locally</td><td>TTL/purge</td></tr><tr><td>App memory/Redis</td><td>Expensive queries/results</td><td>Cache-aside, delete on write, TTL</td></tr><tr><td>Database cache</td><td>Internal hot pages/rows</td><td>Database manages it; recognition only</td></tr></tbody></table></div>
+<p>Ask <strong>who may see the copy, how stale it may be, what a miss costs, and how to
+discard it</strong>. You cannot directly purge a user&#39;s browser.
+When copies exist at several layers, account for their combined age; separate
+ten-second lifetimes do not automatically guarantee data is at most ten
+seconds old end to end.</p>
+<ul>
+<li>Hashed assets: long-lived public immutable, new bytes → new URL.
+Changing unhashed assets need shorter lifetimes/versioning.</li>
+<li>HTML shell: store and revalidate (<code>no-cache</code>) so navigation finds new hashes.</li>
+<li>Public status API: short lifetime chosen from a product freshness limit.</li>
+<li>Personalized/account data: bypass shared caches, normally
+<code>private, no-store</code> in this course. Transient errors: <code>no-store</code>.</li>
+<li>Cache keys select who shares a copy: typically host/path/query, plus configured
+variants. Do not assume cookies/Authorization are automatically part of a
+key. <code>Vary</code> selects header variants and can fragment cache reuse.</li>
+<li><code>no-cache</code> = store but validate before reuse; <code>no-store</code> = do not store;
+<code>private</code> = no shared cache; <code>max-age</code> = freshness;
+<code>s-maxage</code> = shared-cache freshness with stricter revalidation implications.
+Do not assume stale extensions override a stricter policy.</li>
+<li>ETag/Last-Modified support validation; 304 reuses the stored body but still
+involves an upstream check. HIT avoids origin work; MISS may not.</li>
+<li>SWR permits bounded stale reuse while refreshing; SIE permits it on eligible
+error. For <code>max-age=10, stale-while-revalidate=30, stale-if-error=60</code>,
+freshness ends at age 10, SWR permission at 40, SIE at 70 on error.
+Windows are not added together. Verify actual provider behavior; the local
+teaching edge revalidates synchronously, not asynchronous SWR.</li>
+<li>Delete affected app keys AND invalidate React queries after writes.
+Coalescing shares a pending computation among simultaneous misses;
+cached completed results are a different mechanism. Avoid purge-all stampedes.</li>
+<li>Simple origin estimate: <strong>public request rate × miss fraction + uncached
+rate</strong>. At 100 public rps, 90% hits and 5 private rps, estimate 15 origin rps.
+State warm-cache assumptions; this is not a load-test guarantee.</li>
+</ul>
+<h3 id="performance-accessibility-and-observability">Performance, accessibility and observability</h3>
+<ul>
+<li>LCP: largest visible content timing, good ≤2.5 s. INP: interaction to
+visible response, good ≤200 ms. CLS: unexpected shifts, good ≤0.1.
+Evaluate field “good” thresholds at <strong>p75</strong>, not averages.</li>
+<li>INP replaced FID; a handler that starts quickly but blocks rendering can
+look good under FID and bad to the user. Measure actual interactions.</li>
+<li>Lighthouse lab runs are controlled comparisons; field/RUM shows experiences
+across actual users. A small convenience pilot is not CrUX or representative
+population evidence. Instrument rather than invent missing field data.</li>
+<li>Prioritize/resize hero images, reserve dimensions, avoid hero lazy-loading,
+use compression and measure transfer sizes. Inspect bundles; avoid loading
+unnecessary JS; improve expensive interaction work. Compare like conditions
+and correctness, not just scores.</li>
+<li>Choose CSR/SSR/SSG/ISR for content and freshness: CSR shifts work to client;
+SSR generates HTML per request; SSG builds static pages; ISR regenerates with
+bounded freshness. All can deliver cacheable assets; personalized HTML must
+not enter a shared public cache.</li>
+<li>An automated scan is the floor, not the release gate. Test keyboard reach/
+order, visible focus, Enter/Space activation, persistent labels,
+announced/field-associated errors, and dialog focus in/contain/return/Escape.</li>
+<li>Logs record events, metrics aggregate frequency/latency, traces connect work
+across hops. Propagate correlation context for logs/traces; don&#39;t use
+per-request/trace IDs as unbounded metric labels. Never log secrets or
+personal data. Origin logs miss CDN hits that never reach the origin.</li>
+<li>SLI is a measurement; SLO is its target/window; error budget is allowable
+failure. Request-based budgets count bad requests, not downtime minutes.
+Alert on actionable user impact; safely trigger, receive, restore and
+confirm recovery. A configured alert is not proof of delivery.</li>
+</ul>
+<p><strong>Worked example:</strong> “99% of 10,000 feed requests succeed under 500 ms over
+28 days” allows <strong>100 bad requests</strong>. With 120 bad, good proportion is 98.8%:
+the target is missed by 20 requests. To express downtime, define a time-based
+SLI rather than converting that request budget to minutes.</p>
+<p><strong>Worked example (distance):</strong> 16,000 km at 200,000 km/s is 80 ms one way,
+so at least a <strong>160 ms</strong> round trip; four round trips (DNS, TCP, TLS, HTML) cost
+at least 640 ms. A PoP 10 ms away makes a 2-round-trip TLS handshake 20 ms
+instead of 300 ms, even for uncacheable responses.</p>
+<p><strong>Worked example (cache layers and who shares a copy):</strong> a cache stores each
+response under a key (roughly host + path + query) and reuses it for anyone
+with the same key, so ask “who else would get this copy?” A video segment and
+public <code>/api/status</code> are the same for everyone and may be shared; <code>/account</code> is
+personal and must not be. A signed-in-only page returning a cache HIT is an
+incident. A good safeguard is a <strong>synthetic check</strong>: a scripted signed-in
+request, run on a schedule, that raises an alert if the response ever comes
+back as a cache HIT. Adding the user-agent to the cache key does not fix this:
+it multiplies variants, ruins the hit rate and still does not identify the user.</p>
+<p><strong>Worked example (app cache):</strong> <code>cached()</code> is cache-aside: look in Redis, on a
+miss run the query, store with a TTL, return. The <code>inflight</code> map coalesces
+simultaneous misses so the query runs once (prevents a stampede); other
+defences are serving stale while one request refreshes and TTL jitter. After a
+write, delete the affected keys so the next read is a fresh MISS. Choose a TTL
+for a simple bound, delete on write for data your app changes, and versioned
+keys/URLs (<code>hours-v2</code>) to turn “wait for expiry” into a rename.</p>
+<p><strong>Practice:</strong> build a per-content cache matrix; explain an incident write&#39;s
+invalidation; compare streaming content classes; select an improvement using
+vitals; describe a keyboard release check and one useful alert.</p>
+<h2 id="final-preparation-checklist">Final preparation checklist</h2>
+<ul>
+<li><input disabled="" type="checkbox"> Take the full <a href="practice-exam.html">practice exam</a> under timed conditions, then
+check it with the <a href="practice-exam-answer-key.html">worked answers</a>.</li>
+<li><input disabled="" type="checkbox"> Attempt the <a href="practice-case.html">practice scenario</a> before reading its
+<a href="practice-case-answer-key.html">worked answers</a>.</li>
+<li><input disabled="" type="checkbox"> Organize notes by week and practical task, not command-output fields.</li>
+<li><input disabled="" type="checkbox"> Explain each week&#39;s concepts in your own words and give an app example.</li>
+<li><input disabled="" type="checkbox"> Calculate small filtered summaries, TTL waits, miss ratios and
+request-based budgets with units.</li>
+<li><input disabled="" type="checkbox"> Separate compiler success, HTTP success, cache reuse and usable UI.</li>
+<li><input disabled="" type="checkbox"> For each proposed change, name the expected user behavior and a matched check.</li>
+</ul>
+<p><strong>Not assessed:</strong> network-engineer routing/firewall configuration, packet
+forensics, detailed delegation/chain incident reconstruction, cryptographic
+derivations, exact CLI flags, or Weeks 6–10 data modeling, real-time, MCP,
+OAuth/OIDC and later security/data-at-scale work. Practical safe handling
+of HTTPS, private data and CORS from Weeks 1–5 remains in scope.</p>
+
+</main>
+<footer>Individual coursework. D2L contains dated deadlines, submissions and private course access.</footer>
+</body>
+</html>

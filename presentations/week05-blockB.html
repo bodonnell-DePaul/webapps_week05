@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Caching technologies, layer by layer — Week 5 Block B — CSC 436 — Web Application Systems</title>
-<meta name="description" content="Browser, service worker, React data cache, CDN, reverse proxy, Redis, and the database — and one React + Node app that configures four of them">
+<title>Caching without the code tour — Week 5 Block B — CSC 436 — Web Application Systems</title>
+<meta name="description" content="Choose what to cache, see what the browser did, and test whether a copy is safe and fresh">
 <meta name="generator" content="csc436-deck-pipeline">
 <meta name="course-week" content="05">
 <meta name="course-block" content="B">
@@ -129,7 +129,8 @@ body.is-blacked #stage { visibility: hidden; }
   height: 100%;
 }
 
-.slide.has-sources .slide-body { bottom: 112px; }
+/* Match the PPTX content box and leave the source footer its own space. */
+.slide.has-sources .slide-body { bottom: 128px; }
 
 /* ------------------------------------------------------------ furniture --- */
 
@@ -1212,297 +1213,198 @@ h1, h2, h3 {
 
 <main id="stage" data-deck-id="week05-blockB">
 <section class="slide slide--title" data-layout="title" data-phase="content" data-source-block="B" data-source-slide="1" data-title="" aria-label="Slide 1: title">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching layers</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>1</b> / 19</span></div>
+<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching in practice</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>1</b> / 12</span></div>
 <div class="slide-body"><div class="fit"><p class="kicker">CSC 436 — Web Application Systems</p>
-<h1>Caching technologies, layer by layer</h1>
-<p class="sub">Browser, service worker, React data cache, CDN, reverse proxy, Redis, and the database — and one React + Node app that configures four of them</p>
-<div class="title-meta"><span class="chip"><b>Week 5</b> · Block B</span><span class="chip">30 minutes</span><span class="chip">Updated 2026-10-04</span></div>
-<p>Every fast app is a stack of caches. Today you see the whole stack, then configure four layers of it in one React + Node app.</p>
+<h1>Caching without the code tour</h1>
+<p class="sub">Choose what to cache, see what the browser did, and test whether a copy is safe and fresh</p>
+<div class="title-meta"><span class="chip"><b>Week 5</b> · Block B</span><span class="chip">30 minutes</span><span class="chip">Updated 2026-10-08</span></div>
+<p>A cache is a reusable copy. The design question is not “how do I write the cache code?” It is “which copy can safely answer this request, and how will I know it is still useful?”</p>
 </div></div>
 
 
 </section>
-<section class="slide slide--svg" data-layout="svg" data-phase="content" data-source-block="B" data-source-slide="2" data-title="The cache stack, from the tab to the database" aria-label="Slide 2: The cache stack, from the tab to the database">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching layers</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>2</b> / 19</span></div>
-<div class="slide-body"><div class="fit"><h1>The cache stack, from the tab to the database</h1>
+<section class="slide slide--bullets" data-layout="bullets" data-phase="content" data-source-block="B" data-source-slide="2" data-title="One request may meet several copies before the source" aria-label="Slide 2: One request may meet several copies before the source">
+<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching in practice</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>2</b> / 12</span></div>
+<div class="slide-body"><div class="fit"><h1>One request may meet several copies before the source</h1>
+<ul>
+<li>A request may stop at the browser, a nearby shared edge, or an application service</li>
+<li>Each copy must be safe for its audience and fresh enough for the feature</li>
+<li>Use browser evidence to tell whether reuse happened and whether it helped</li>
+</ul>
+
+<aside class="callout callout--key" role="note"><p class="callout-head"><span class="ico" aria-hidden="true">◆</span><span>Key idea</span></p><p>Caching trades repeated work for a temporary promise about sameness.</p>
+</aside></div></div>
+
+
+</section>
+<section class="slide slide--svg" data-layout="svg" data-phase="content" data-source-block="B" data-source-slide="3" data-title="The path a page request can take" aria-label="Slide 3: The path a page request can take">
+<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching in practice</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>3</b> / 12</span></div>
+<div class="slide-body"><div class="fit"><h1>The path a page request can take</h1>
 <figure class="figure figure--plain"><div class="frame">
-<svg viewBox="0 0 1180 360" role="img" aria-label="Seven caching layers in a row from user to data. Browser HTTP cache and service worker, both inside the user's device. React data cache such as TanStack Query, in the tab's memory. CDN edge at a point of presence. Reverse proxy such as Nginx or Varnish in front of the app. App cache such as Redis or Memcached shared by app servers. Database with its own buffer cache, read replicas, and materialized views. Arrows show requests flowing right only on a miss. Lower labels show the first three are per user and private, the rest are shared.">
+<svg viewBox="0 0 1180 390" role="img" aria-label="A request flows from a viewer's browser cache to a nearby shared edge, then to application services, then to the source database. A hit stops the request at that layer. Below the path, examples show browser-only copies for personal data, shared edge copies for public media, and application or database copies for prepared results.">
   <defs>
-    <marker id="deck-s2-g1-w5b1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
-      <path d="M0 0 L10 5 L0 10 z" fill="#B6CCDE"/>
-    </marker>
+    <marker id="deck-s3-g1-b2-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#B6CCDE"/></marker>
   </defs>
   <g font-family="Segoe UI, sans-serif" text-anchor="middle">
-    <rect x="10" y="60" width="150" height="150" rx="12" fill="#17364E" stroke="#5EEAD4" stroke-width="2"/>
-    <text x="85" y="98" fill="#5EEAD4" font-size="20" font-weight="600">React data</text>
-    <text x="85" y="122" fill="#5EEAD4" font-size="20" font-weight="600">cache</text>
-    <text x="85" y="160" fill="#B6CCDE" font-size="17">TanStack Query</text>
-    <text x="85" y="184" fill="#B6CCDE" font-size="17">SWR</text>
-
-    <rect x="178" y="60" width="150" height="150" rx="12" fill="#17364E" stroke="#5EEAD4" stroke-width="2"/>
-    <text x="253" y="98" fill="#5EEAD4" font-size="20" font-weight="600">Service</text>
-    <text x="253" y="122" fill="#5EEAD4" font-size="20" font-weight="600">worker</text>
-    <text x="253" y="160" fill="#B6CCDE" font-size="17">Cache Storage</text>
-    <text x="253" y="184" fill="#B6CCDE" font-size="17">Workbox</text>
-
-    <rect x="346" y="60" width="150" height="150" rx="12" fill="#17364E" stroke="#5EEAD4" stroke-width="2"/>
-    <text x="421" y="98" fill="#5EEAD4" font-size="20" font-weight="600">Browser</text>
-    <text x="421" y="122" fill="#5EEAD4" font-size="20" font-weight="600">HTTP cache</text>
-    <text x="421" y="160" fill="#B6CCDE" font-size="17">memory + disk</text>
-    <text x="421" y="184" fill="#B6CCDE" font-size="17">Cache-Control</text>
-
-    <rect x="514" y="60" width="150" height="150" rx="12" fill="#17364E" stroke="#FCD34D" stroke-width="2"/>
-    <text x="589" y="98" fill="#FCD34D" font-size="20" font-weight="600">CDN</text>
-    <text x="589" y="122" fill="#FCD34D" font-size="20" font-weight="600">edge</text>
-    <text x="589" y="160" fill="#B6CCDE" font-size="17">Cloudflare</text>
-    <text x="589" y="184" fill="#B6CCDE" font-size="17">CloudFront</text>
-
-    <rect x="682" y="60" width="150" height="150" rx="12" fill="#17364E" stroke="#FCD34D" stroke-width="2"/>
-    <text x="757" y="98" fill="#FCD34D" font-size="20" font-weight="600">Reverse</text>
-    <text x="757" y="122" fill="#FCD34D" font-size="20" font-weight="600">proxy</text>
-    <text x="757" y="160" fill="#B6CCDE" font-size="17">Nginx</text>
-    <text x="757" y="184" fill="#B6CCDE" font-size="17">Varnish</text>
-
-    <rect x="850" y="60" width="150" height="150" rx="12" fill="#17364E" stroke="#FCD34D" stroke-width="2"/>
-    <text x="925" y="98" fill="#FCD34D" font-size="20" font-weight="600">App</text>
-    <text x="925" y="122" fill="#FCD34D" font-size="20" font-weight="600">cache</text>
-    <text x="925" y="160" fill="#B6CCDE" font-size="17">Redis</text>
-    <text x="925" y="184" fill="#B6CCDE" font-size="17">Memcached</text>
-
-    <rect x="1018" y="60" width="152" height="150" rx="12" fill="#0B1B2B" stroke="#FCA5A5" stroke-width="2"/>
-    <text x="1094" y="98" fill="#FCA5A5" font-size="20" font-weight="600">Database</text>
-    <text x="1094" y="140" fill="#B6CCDE" font-size="17">buffer pool</text>
-    <text x="1094" y="164" fill="#B6CCDE" font-size="17">replicas</text>
-    <text x="1094" y="188" fill="#B6CCDE" font-size="17">mat. views</text>
-
-    <path d="M162 135 H174" stroke="#B6CCDE" stroke-width="3" marker-end="url(#deck-s2-g1-w5b1)"/>
-    <path d="M330 135 H342" stroke="#B6CCDE" stroke-width="3" marker-end="url(#deck-s2-g1-w5b1)"/>
-    <path d="M498 135 H510" stroke="#B6CCDE" stroke-width="3" marker-end="url(#deck-s2-g1-w5b1)"/>
-    <path d="M666 135 H678" stroke="#B6CCDE" stroke-width="3" marker-end="url(#deck-s2-g1-w5b1)"/>
-    <path d="M834 135 H846" stroke="#B6CCDE" stroke-width="3" marker-end="url(#deck-s2-g1-w5b1)"/>
-    <path d="M1002 135 H1014" stroke="#B6CCDE" stroke-width="3" marker-end="url(#deck-s2-g1-w5b1)"/>
-
-    <line x1="10" y1="244" x2="496" y2="244" stroke="#5EEAD4" stroke-width="3"/>
-    <text x="253" y="276" fill="#5EEAD4" font-size="20" font-weight="600">on the user's device · one user</text>
-    <line x1="514" y1="244" x2="1000" y2="244" stroke="#FCD34D" stroke-width="3"/>
-    <text x="757" y="276" fill="#FCD34D" font-size="20" font-weight="600">on servers · shared by everyone</text>
-    <text x="590" y="330" fill="#B6CCDE" font-size="20">A request moves right only on a miss. Each hit saves every layer to its right.</text>
+    <rect x="22" y="50" width="235" height="104" rx="14" fill="#17364E" stroke="#5EEAD4" stroke-width="3"/>
+    <text x="139" y="92" fill="#5EEAD4" font-size="23" font-weight="700">Viewer's browser</text>
+    <text x="139" y="126" fill="#B6CCDE" font-size="19">one person's copy</text>
+    <rect x="322" y="50" width="235" height="104" rx="14" fill="#17364E" stroke="#FCD34D" stroke-width="3"/>
+    <text x="439" y="92" fill="#FCD34D" font-size="23" font-weight="700">Nearby shared edge</text>
+    <text x="439" y="126" fill="#B6CCDE" font-size="19">many viewers</text>
+    <rect x="622" y="50" width="235" height="104" rx="14" fill="#17364E" stroke="#FCD34D" stroke-width="3"/>
+    <text x="739" y="92" fill="#FCD34D" font-size="23" font-weight="700">Application service</text>
+    <text x="739" y="126" fill="#B6CCDE" font-size="19">prepared results</text>
+    <rect x="922" y="50" width="235" height="104" rx="14" fill="#0B1B2B" stroke="#FCA5A5" stroke-width="3"/>
+    <text x="1039" y="92" fill="#FCA5A5" font-size="23" font-weight="700">Source data</text>
+    <text x="1039" y="126" fill="#B6CCDE" font-size="19">database or origin</text>
+    <path d="M259 102 H314" stroke="#B6CCDE" stroke-width="3" marker-end="url(#deck-s3-g1-b2-arrow)"/>
+    <path d="M559 102 H614" stroke="#B6CCDE" stroke-width="3" marker-end="url(#deck-s3-g1-b2-arrow)"/>
+    <path d="M859 102 H914" stroke="#B6CCDE" stroke-width="3" marker-end="url(#deck-s3-g1-b2-arrow)"/>
+    <text x="139" y="204" fill="#5EEAD4" font-size="18">profile image</text>
+    <text x="439" y="204" fill="#FCD34D" font-size="18">poster or public video</text>
+    <text x="739" y="204" fill="#FCD34D" font-size="18">popular catalog page</text>
+    <text x="1039" y="204" fill="#B6CCDE" font-size="18">original record</text>
+    <path d="M22 242 H257" stroke="#5EEAD4" stroke-width="3"/>
+    <path d="M322 242 H557" stroke="#FCD34D" stroke-width="3"/>
+    <path d="M622 242 H857" stroke="#FCD34D" stroke-width="3"/>
+    <path d="M922 242 H1157" stroke="#FCA5A5" stroke-width="3"/>
+    <text x="590" y="294" fill="#F3F8FC" font-size="22" font-weight="700">A hit ends the trip early. A miss moves the request to the next layer.</text>
+    <text x="590" y="342" fill="#B6CCDE" font-size="19">Shared copies must never mix one person's private response with another's.</text>
   </g>
-</svg></div><figcaption>Each layer is closer to the user, faster, and knows less about whether its copy is still true</figcaption></figure></div></div>
+</svg></div><figcaption>A request stops at the first safe, sufficiently fresh copy</figcaption></figure></div></div>
 
 
 </section>
-<section class="slide slide--table has-sources" data-layout="table" data-phase="content" data-source-block="B" data-source-slide="3" data-title="What each layer is good at, and who uses it" aria-label="Slide 3: What each layer is good at, and who uses it">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching layers</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>3</b> / 19</span></div>
-<div class="slide-body"><div class="fit"><h1>What each layer is good at, and who uses it</h1>
-<div class="table-wrap"><table><thead><tr><th>Layer</th><th>Best for</th><th>Real-world example</th></tr></thead><tbody><tr><td><strong>React data cache</strong></td><td>Not refetching the same API data on every render or route change</td><td>TanStack Query in a React dashboard</td></tr><tr><td><strong>Service worker</strong></td><td>Offline and instant repeat loads; app-shell caching</td><td>Offline-capable progressive web apps</td></tr><tr><td><strong>Browser HTTP cache</strong></td><td>JS, CSS, images, fonts with long lifetimes</td><td>Every site: hashed bundle files</td></tr><tr><td><strong>CDN edge</strong></td><td>Static files and public responses near users</td><td>Video segments, product images, <code>/api/status</code></td></tr><tr><td><strong>Reverse proxy</strong></td><td>Caching whole responses in front of slow app servers</td><td>Nginx <code>proxy_cache</code>, Varnish on news sites</td></tr><tr><td><strong>App cache (Redis)</strong></td><td>Expensive query results, sessions, rate-limit counters</td><td>Facebook&#39;s memcache tier — billions of requests a second</td></tr></tbody></table></div></div></div>
-<div class="sources"><span class="sr-only">Sources: </span><ul><li>MDN — <a href="https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API">Service Worker API</a></li><li>Varnish — <a href="https://varnish-cache.org/intro/">Introduction</a> · Nginx — <a href="https://nginx.org/en/docs/http/ngx_http_proxy_module.html"><code>proxy_cache</code></a></li><li>USENIX NSDI &#39;13 — <a href="https://www.usenix.org/conference/nsdi13/technical-sessions/presentation/nishtala">Scaling Memcache at Facebook</a></li><li>AWS — <a href="https://aws.amazon.com/caching/">Caching overview</a></li></ul></div>
+<section class="slide slide--table" data-layout="table" data-phase="content" data-source-block="B" data-source-slide="4" data-title="Choose the copy by asking who it is for" aria-label="Slide 4: Choose the copy by asking who it is for">
+<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching in practice</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>4</b> / 12</span></div>
+<div class="slide-body"><div class="fit"><h1>Choose the copy by asking who it is for</h1>
+<div class="table-wrap"><table><thead><tr><th>Example</th><th>Audience</th><th>Typical choice</th><th>The question to debate</th></tr></thead><tbody><tr><td>Movie poster</td><td>Everyone</td><td>Shared edge copy</td><td>How quickly must a correction appear?</td></tr><tr><td>Signed-in watch list</td><td>One account</td><td>Personal browser or account-aware service</td><td>Could another account ever receive it?</td></tr><tr><td>Public service status</td><td>Everyone</td><td>Short-lived shared copy</td><td>How stale is acceptable during an outage?</td></tr><tr><td>Profile page shell</td><td>Everyone</td><td>Shared, versioned files</td><td>How does a new release replace old files?</td></tr><tr><td>Available seats</td><td>Everyone, but changing quickly</td><td>Very brief or no shared copy</td><td>Could a stale answer cause a bad booking?</td></tr></tbody></table></div></div></div>
+
 
 </section>
-<section class="slide slide--bullets" data-layout="bullets" data-phase="content" data-source-block="B" data-source-slide="4" data-title="Four questions pick the layer for you" aria-label="Slide 4: Four questions pick the layer for you">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching layers</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>4</b> / 19</span></div>
-<div class="slide-body"><div class="fit"><h1>Four questions pick the layer for you</h1>
+<section class="slide slide--bullets" data-layout="bullets" data-phase="content" data-source-block="B" data-source-slide="5" data-title="Browser test 1: did the page reuse its own files?" aria-label="Slide 5: Browser test 1: did the page reuse its own files?">
+<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching in practice</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>5</b> / 12</span></div>
+<div class="slide-body"><div class="fit"><h1>Browser test 1: did the page reuse its own files?</h1>
 <ul>
-<li><strong>Who may see this copy?</strong> One user → device layers only. Everyone → any layer</li>
-<li><strong>How stale may it be?</strong> Never → don&#39;t cache, or revalidate every time. Seconds → short TTL. Forever → hashed name</li>
-<li><strong>How expensive is a miss?</strong> A 300 ms query hit 1,000 times a minute is worth caching; a 2 ms lookup may not be</li>
-<li><strong>How will you throw it away?</strong> Expire on a timer, delete on write, or change the name — decide <strong>before</strong> caching</li>
+<li>Open the browser&#39;s <strong>Network</strong> panel and reload a page</li>
+<li>Reload again; compare images, styles, and scripts with the first visit</li>
+<li>Look for “memory cache,” “disk cache,” “not modified,” or a much smaller transfer</li>
+<li>Select a resource and inspect its response headers for its freshness policy</li>
 </ul>
 
-<aside class="callout callout--key" role="note"><p class="callout-head"><span class="ico" aria-hidden="true">◆</span><span>Key idea</span></p><p>If you cannot answer the fourth question, you are not ready to add the cache.
-Stale data that you cannot remove is a bug you shipped on purpose.</p>
+<aside class="callout callout--key" role="note"><p class="callout-head"><span class="ico" aria-hidden="true">◆</span><span>Key idea</span></p><p>The evidence is a changed source of the response or fewer bytes—not just a page that feels fast.</p>
 </aside></div></div>
 
 
 </section>
-<section class="slide slide--section" data-layout="section" data-phase="content" data-source-block="B" data-source-slide="5" data-title="CampusPulse in React + Node, cached end to end" aria-label="Slide 5: CampusPulse in React + Node, cached end to end">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching layers</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>5</b> / 19</span></div>
-<div class="slide-body"><div class="fit"><p class="kicker">Worked example</p><div class="rule-accent" aria-hidden="true"></div><h1>CampusPulse in React + Node, cached end to end</h1>
-</div></div>
-
-
-</section>
-<section class="slide slide--svg has-sources" data-layout="svg" data-phase="content" data-source-block="B" data-source-slide="6" data-title="Four kinds of response, four caching decisions" aria-label="Slide 6: Four kinds of response, four caching decisions">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching layers</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>6</b> / 19</span></div>
-<div class="slide-body"><div class="fit"><h1>Four kinds of response, four caching decisions</h1>
-<figure class="figure figure--plain"><div class="frame">
-<svg viewBox="0 0 1180 340" role="img" aria-label="The CampusPulse sample architecture. A browser talks through a CDN to one Express server. Express serves four kinds of response. Hashed assets: cached by browser and CDN for one year. The index.html shell: no-cache, revalidated every load. API status: public for 10 seconds at browser and CDN, plus Redis for 10 seconds. API incidents: no-cache for browsers and CDN, Redis for 30 seconds with delete on write. API me: private, no-store, never cached. Redis or in-memory cache sits beside Express, and a slow database sits behind it.">
-  <g font-family="Segoe UI, sans-serif">
-    <rect x="14" y="40" width="190" height="260" rx="14" fill="#17364E" stroke="#5EEAD4" stroke-width="2"/>
-    <text x="109" y="90" fill="#5EEAD4" font-size="23" font-weight="600" text-anchor="middle">Browser</text>
-    <text x="109" y="122" fill="#B6CCDE" font-size="18" text-anchor="middle">React app</text>
-    <text x="109" y="190" fill="#FCD34D" font-size="23" font-weight="600" text-anchor="middle">CDN</text>
-    <text x="109" y="222" fill="#B6CCDE" font-size="18" text-anchor="middle">optional, in front</text>
-
-    <rect x="232" y="40" width="640" height="260" rx="14" fill="#0B1B2B" stroke="#5B82A6" stroke-width="2"/>
-    <text x="256" y="76" fill="#F3F8FC" font-size="22" font-weight="600">Express · server.mjs</text>
-    <text x="256" y="118" fill="#5EEAD4" font-size="20" font-weight="600">/assets/index-C4c61eeb.js</text>
-    <text x="580" y="118" fill="#B6CCDE" font-size="18">browser + CDN, 1 year</text>
-    <text x="256" y="158" fill="#5EEAD4" font-size="20" font-weight="600">/ (index.html)</text>
-    <text x="580" y="158" fill="#B6CCDE" font-size="18">revalidate every load</text>
-    <text x="256" y="198" fill="#FCD34D" font-size="20" font-weight="600">/api/status</text>
-    <text x="580" y="198" fill="#B6CCDE" font-size="18">CDN 10 s + Redis 10 s</text>
-    <text x="256" y="238" fill="#FCD34D" font-size="20" font-weight="600">/api/incidents</text>
-    <text x="580" y="238" fill="#B6CCDE" font-size="18">Redis 30 s, delete on write</text>
-    <text x="256" y="278" fill="#FCA5A5" font-size="20" font-weight="600">/api/me</text>
-    <text x="580" y="278" fill="#B6CCDE" font-size="18">never cached</text>
-
-    <rect x="900" y="40" width="266" height="110" rx="14" fill="#17364E" stroke="#FCD34D" stroke-width="2"/>
-    <text x="1033" y="84" fill="#FCD34D" font-size="22" font-weight="600" text-anchor="middle">Redis or memory</text>
-    <text x="1033" y="118" fill="#B6CCDE" font-size="18" text-anchor="middle">store.mjs · X-Cache</text>
-    <rect x="900" y="190" width="266" height="110" rx="14" fill="#17364E" stroke="#FCA5A5" stroke-width="2"/>
-    <text x="1033" y="234" fill="#FCA5A5" font-size="22" font-weight="600" text-anchor="middle">Database</text>
-    <text x="1033" y="268" fill="#B6CCDE" font-size="18" text-anchor="middle">fake-db.mjs · 300 ms</text>
-  </g>
-</svg></div><figcaption>One Express server serves the React build and the API, and makes a different caching decision for each route</figcaption></figure></div></div>
-<div class="sources"><span class="sr-only">Sources: </span><ul><li>Course — <a href="../samples/react-node-cache/README.md"><code>react-node-cache</code> sample</a></li></ul></div>
-
-</section>
-<section class="slide slide--code has-sources" data-layout="code" data-phase="content" data-source-block="B" data-source-slide="7" data-title="Step 1 — Vite already fingerprints your build" aria-label="Slide 7: Step 1 — Vite already fingerprints your build">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching layers</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>7</b> / 19</span></div>
-<div class="slide-body"><div class="fit"><h1>Step 1 — Vite already fingerprints your build</h1>
-<figure class="codeblock" style="--code-size:25px"><figcaption><span>npm run build — what Vite writes to dist/</span><span class="lang">text</span></figcaption><pre><code><span class="row">dist/</span><span class="row">├── index.html                ← small; names the current bundle</span><span class="row">└── assets/</span><span class="row">    ├── index-C4c61eeb.js     ← the hash changes when the bytes change</span><span class="row">    └── index-9b73e0aa.css</span><span class="row">&nbsp;</span><span class="row"># index.html after the build:</span><span class="row">&lt;script type=&quot;module&quot; src=&quot;/assets/index-C4c61eeb.js&quot;&gt;&lt;/script&gt;</span></code></pre></figure>
-<aside class="callout callout--key" role="note"><p class="callout-head"><span class="ico" aria-hidden="true">◆</span><span>Key idea</span></p><p>New code → new filename → a URL no cache has ever seen. That is why the files
-can be cached for a year with nothing to purge, and why <code>index.html</code> cannot.</p>
-</aside></div></div>
-<div class="sources"><span class="sr-only">Sources: </span><ul><li>Vite — <a href="https://vite.dev/guide/build">Building for production</a></li></ul></div>
-
-</section>
-<section class="slide slide--code has-sources" data-layout="code" data-phase="content" data-source-block="B" data-source-slide="8" data-title="Step 2 — Express: long-lived assets, a shell that always checks" aria-label="Slide 8: Step 2 — Express: long-lived assets, a shell that always checks">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching layers</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>8</b> / 19</span></div>
-<div class="slide-body"><div class="fit"><h1>Step 2 — Express: long-lived assets, a shell that always checks</h1>
-<figure class="codeblock" style="--code-size:18px"><figcaption><span>server.mjs — static files and the SPA shell</span><span class="lang">js</span></figcaption><pre><code><span class="row"><span class="hljs-comment">// Hashed build output: new bytes get a new URL, so browsers and</span></span><span class="row"><span class="hljs-comment">// CDNs may keep these for a year. A missing asset is a 404.</span></span><span class="row">app.<span class="hljs-title function_">use</span>(<span class="hljs-string">&quot;/assets&quot;</span>, express.<span class="hljs-title function_">static</span>(<span class="hljs-title function_">resolve</span>(distDir, <span class="hljs-string">&quot;assets&quot;</span>), {</span><span class="row">  <span class="hljs-attr">immutable</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">maxAge</span>: <span class="hljs-string">&quot;1y&quot;</span>, <span class="hljs-attr">index</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">fallthrough</span>: <span class="hljs-literal">false</span>,</span><span class="row">}));</span><span class="row"><span class="hljs-comment">// → Cache-Control: public, max-age=31536000, immutable</span></span><span class="row">&nbsp;</span><span class="row"><span class="hljs-comment">// The shell names the current hashes, so every load checks for a</span></span><span class="row"><span class="hljs-comment">// newer deploy — a cheap 304 Not Modified when nothing changed.</span></span><span class="row">app.<span class="hljs-title function_">get</span>(<span class="hljs-string">&quot;/{*splat}&quot;</span>, <span class="hljs-function">(</span><span class="hljs-params">req, res</span><span class="hljs-function">) =&gt;</span> {</span><span class="row">  res.<span class="hljs-title function_">set</span>(<span class="hljs-string">&quot;Cache-Control&quot;</span>, <span class="hljs-string">&quot;no-cache&quot;</span>);</span><span class="row">  res.<span class="hljs-title function_">sendFile</span>(<span class="hljs-string">&quot;index.html&quot;</span>, { <span class="hljs-attr">root</span>: distDir });</span><span class="row">});</span></code></pre></figure></div></div>
-<div class="sources"><span class="sr-only">Sources: </span><ul><li>Express 5 — <a href="https://expressjs.com/en/5x/api.html"><code>express.static</code> and <code>res.sendFile</code></a></li></ul></div>
-
-</section>
-<section class="slide slide--code" data-layout="code" data-phase="content" data-source-block="B" data-source-slide="9" data-title="Step 3 — one Cache-Control decision per API route" aria-label="Slide 9: Step 3 — one Cache-Control decision per API route">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching layers</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>9</b> / 19</span></div>
-<div class="slide-body"><div class="fit"><h1>Step 3 — one Cache-Control decision per API route</h1>
-<figure class="codeblock" style="--code-size:18px"><figcaption><span>server.mjs — the API routes</span><span class="lang">js</span></figcaption><pre><code><span class="row">app.<span class="hljs-title function_">get</span>(<span class="hljs-string">&quot;/api/status&quot;</span>, <span class="hljs-title function_">async</span> (req, res) =&gt; {        <span class="hljs-comment">// same for everyone</span></span><span class="row">  <span class="hljs-keyword">const</span> { value, state } = <span class="hljs-keyword">await</span> <span class="hljs-title function_">cached</span>(<span class="hljs-string">&quot;status:v1&quot;</span>, <span class="hljs-number">10</span>, <span class="hljs-function">() =&gt;</span> db.<span class="hljs-title function_">status</span>());</span><span class="row">  res.<span class="hljs-title function_">set</span>({ <span class="hljs-string">&quot;Cache-Control&quot;</span>: <span class="hljs-string">&quot;public, max-age=10&quot;</span>, <span class="hljs-string">&quot;X-Cache&quot;</span>: state });</span><span class="row">  res.<span class="hljs-title function_">json</span>(value);</span><span class="row">});</span><span class="row">&nbsp;</span><span class="row">app.<span class="hljs-title function_">get</span>(<span class="hljs-string">&quot;/api/incidents&quot;</span>, <span class="hljs-title function_">async</span> (req, res) =&gt; {     <span class="hljs-comment">// changes on writes</span></span><span class="row">  <span class="hljs-keyword">const</span> { value, state } = <span class="hljs-keyword">await</span> <span class="hljs-title function_">cached</span>(<span class="hljs-string">&quot;incidents:open:v1&quot;</span>, <span class="hljs-number">30</span>,</span><span class="row">    <span class="hljs-function">() =&gt;</span> db.<span class="hljs-title function_">openIncidents</span>());</span><span class="row">  res.<span class="hljs-title function_">set</span>({ <span class="hljs-string">&quot;Cache-Control&quot;</span>: <span class="hljs-string">&quot;no-cache&quot;</span>, <span class="hljs-string">&quot;X-Cache&quot;</span>: state });</span><span class="row">  res.<span class="hljs-title function_">json</span>({ <span class="hljs-attr">incidents</span>: value });</span><span class="row">});</span><span class="row">&nbsp;</span><span class="row">app.<span class="hljs-title function_">get</span>(<span class="hljs-string">&quot;/api/me&quot;</span>, <span class="hljs-function">(</span><span class="hljs-params">req, res</span><span class="hljs-function">) =&gt;</span> {                  <span class="hljs-comment">// one user only</span></span><span class="row">  res.<span class="hljs-title function_">set</span>(<span class="hljs-string">&quot;Cache-Control&quot;</span>, <span class="hljs-string">&quot;private, no-store&quot;</span>);</span><span class="row">  <span class="hljs-comment">// … read the session cookie and respond …</span></span><span class="row">});</span></code></pre></figure></div></div>
-
-
-</section>
-<section class="slide slide--code has-sources" data-layout="code" data-phase="content" data-source-block="B" data-source-slide="10" data-title="Step 4 — cache-aside, with a stampede guard" aria-label="Slide 10: Step 4 — cache-aside, with a stampede guard">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching layers</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>10</b> / 19</span></div>
-<div class="slide-body"><div class="fit"><h1>Step 4 — cache-aside, with a stampede guard</h1>
-<figure class="codeblock" style="--code-size:18px"><figcaption><span>server.mjs — the cached() helper</span><span class="lang">js</span></figcaption><pre><code><span class="row"><span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">cached</span>(<span class="hljs-params">key, ttlSeconds, load</span>) {</span><span class="row">  <span class="hljs-keyword">const</span> hit = <span class="hljs-keyword">await</span> store.<span class="hljs-title function_">get</span>(key);</span><span class="row">  <span class="hljs-keyword">if</span> (hit !== <span class="hljs-literal">null</span>) <span class="hljs-keyword">return</span> { <span class="hljs-attr">value</span>: <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">parse</span>(hit), <span class="hljs-attr">state</span>: <span class="hljs-string">&quot;HIT&quot;</span> };</span><span class="row">  <span class="hljs-keyword">if</span> (!inflight.<span class="hljs-title function_">has</span>(key)) {                      <span class="hljs-comment">// first miss does the work</span></span><span class="row">    inflight.<span class="hljs-title function_">set</span>(key, (<span class="hljs-title function_">async</span> () =&gt; {</span><span class="row">      <span class="hljs-keyword">try</span> {</span><span class="row">        <span class="hljs-keyword">const</span> value = <span class="hljs-keyword">await</span> <span class="hljs-title function_">load</span>();</span><span class="row">        <span class="hljs-keyword">await</span> store.<span class="hljs-title function_">setEx</span>(key, ttlSeconds, <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">stringify</span>(value));</span><span class="row">        <span class="hljs-keyword">return</span> value;</span><span class="row">      } <span class="hljs-keyword">finally</span> {</span><span class="row">        inflight.<span class="hljs-title function_">delete</span>(key);</span><span class="row">      }</span><span class="row">    })());</span><span class="row">  }</span><span class="row">  <span class="hljs-keyword">return</span> { <span class="hljs-attr">value</span>: <span class="hljs-keyword">await</span> inflight.<span class="hljs-title function_">get</span>(key), <span class="hljs-attr">state</span>: <span class="hljs-string">&quot;MISS&quot;</span> };</span><span class="row">}</span></code></pre></figure></div></div>
-<div class="sources"><span class="sr-only">Sources: </span><ul><li>Redis — <a href="https://redis.io/solutions/caching/">Caching</a> · <a href="https://redis.io/docs/latest/develop/clients/nodejs/">Node.js client</a></li></ul></div>
-
-</section>
-<section class="slide slide--code" data-layout="code" data-phase="content" data-source-block="B" data-source-slide="11" data-title="Step 5 — every write deletes the keys it changed" aria-label="Slide 11: Step 5 — every write deletes the keys it changed">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching layers</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>11</b> / 19</span></div>
-<div class="slide-body"><div class="fit"><h1>Step 5 — every write deletes the keys it changed</h1>
-<figure class="codeblock" style="--code-size:23px"><figcaption><span>server.mjs — POST /api/incidents (validation trimmed)</span><span class="lang">js</span></figcaption><pre><code><span class="row">app.<span class="hljs-title function_">post</span>(<span class="hljs-string">&quot;/api/incidents&quot;</span>, jsonBody, <span class="hljs-title function_">async</span> (req, res) =&gt; {</span><span class="row">  <span class="hljs-comment">// … refuse unless writes are enabled; validate title and service …</span></span><span class="row">  <span class="hljs-keyword">const</span> created = <span class="hljs-keyword">await</span> db.<span class="hljs-title function_">createIncident</span>({ <span class="hljs-attr">title</span>: title.<span class="hljs-title function_">trim</span>(), service });</span><span class="row">  <span class="hljs-keyword">await</span> <span class="hljs-title class_">Promise</span>.<span class="hljs-title function_">all</span>([store.<span class="hljs-title function_">del</span>(<span class="hljs-string">&quot;incidents:open:v1&quot;</span>), store.<span class="hljs-title function_">del</span>(<span class="hljs-string">&quot;status:v1&quot;</span>)]);</span><span class="row">  res.<span class="hljs-title function_">status</span>(<span class="hljs-number">201</span>).<span class="hljs-title function_">location</span>(<span class="hljs-string">`/api/incidents/</span><span class="hljs-subst">${created.id}</span><span class="hljs-string">`</span>).<span class="hljs-title function_">json</span>(created);</span><span class="row">});</span></code></pre></figure>
-<aside class="callout callout--key" role="note"><p class="callout-head"><span class="ico" aria-hidden="true">◆</span><span>Key idea</span></p><p>The next read is a <code>MISS</code> and loads fresh data. A new incident changes the
-status summary too — forgetting a <strong>dependent key</strong> is the classic bug.</p>
-</aside></div></div>
-
-
-</section>
-<section class="slide slide--code has-sources" data-layout="code" data-phase="content" data-source-block="B" data-source-slide="12" data-title="Step 6 — React keeps one shared copy in the tab" aria-label="Slide 12: Step 6 — React keeps one shared copy in the tab">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching layers</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>12</b> / 19</span></div>
-<div class="slide-body"><div class="fit"><h1>Step 6 — React keeps one shared copy in the tab</h1>
-<figure class="codeblock" style="--code-size:19px"><figcaption><span>StatusBanner.jsx — TanStack Query as the client cache</span><span class="lang">jsx</span></figcaption><pre><code><span class="row"><span class="hljs-keyword">import</span> { useQuery } <span class="hljs-keyword">from</span> <span class="hljs-string">&quot;@tanstack/react-query&quot;</span>;</span><span class="row">&nbsp;</span><span class="row"><span class="hljs-keyword">export</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">StatusBanner</span>() {</span><span class="row">  <span class="hljs-keyword">const</span> { data, isPending } = <span class="hljs-title function_">useQuery</span>({</span><span class="row">    <span class="hljs-attr">queryKey</span>: [<span class="hljs-string">&quot;status&quot;</span>],</span><span class="row">    <span class="hljs-attr">queryFn</span>: <span class="hljs-function">() =&gt;</span> <span class="hljs-title function_">fetch</span>(<span class="hljs-string">&quot;/api/status&quot;</span>).<span class="hljs-title function_">then</span>(<span class="hljs-function">(</span><span class="hljs-params">r</span><span class="hljs-function">) =&gt;</span> r.<span class="hljs-title function_">json</span>()),</span><span class="row">    <span class="hljs-attr">staleTime</span>: <span class="hljs-number">10_000</span>,   <span class="hljs-comment">// every component shares one copy for 10 s</span></span><span class="row">  });</span><span class="row">  <span class="hljs-keyword">if</span> (isPending) <span class="hljs-keyword">return</span> <span class="hljs-tag">&lt;</span><span class="hljs-name">p</span><span class="hljs-tag">&gt;</span><span class="language-xml">Checking services…</span><span class="hljs-tag">&lt;/</span><span class="hljs-name">p</span><span class="hljs-tag">&gt;</span>;</span><span class="row">  <span class="hljs-keyword">const</span> down = data.<span class="hljs-property">services</span>.<span class="hljs-title function_">filter</span>(<span class="hljs-function">(</span><span class="hljs-params">s</span><span class="hljs-function">) =&gt;</span> s.<span class="hljs-property">state</span> !== <span class="hljs-string">&quot;operational&quot;</span>);</span><span class="row">  <span class="hljs-keyword">return</span> <span class="hljs-tag">&lt;</span><span class="hljs-name">p</span><span class="hljs-tag">&gt;</span><span class="language-xml">{down.length ? `${down.length} degraded` : &quot;All clear&quot;}</span><span class="hljs-tag">&lt;/</span><span class="hljs-name">p</span><span class="hljs-tag">&gt;</span>;</span><span class="row">}</span></code></pre></figure></div></div>
-<div class="sources"><span class="sr-only">Sources: </span><ul><li>TanStack Query — <a href="https://tanstack.com/query/latest/docs/framework/react/guides/caching">Caching examples</a></li></ul></div>
-
-</section>
-<section class="slide slide--demo has-sources" data-layout="demo" data-phase="content" data-source-block="B" data-source-slide="13" data-title="Demo: watch the app cache absorb the load" aria-label="Slide 13: Demo: watch the app cache absorb the load">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching layers</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>13</b> / 19</span></div>
-<div class="slide-body"><div class="fit"><p class="demo-banner"><span aria-hidden="true">▶</span> Live demo</p>
-<h1>Demo: watch the app cache absorb the load</h1>
-
-<div class="demo-grid">
-<div class="demo-col"><div class="demo-panel"><h3>Do this</h3><ol>
-<li>In <code>weeks/week05/samples/react-node-cache</code>: <code>npm install</code>, then <code>npm start</code></li>
-<li>Open <code>http://127.0.0.1:3000/</code> with DevTools → Network, then reload</li>
-<li>Open <code>/api/status</code> and reload twice; read <code>X-Cache</code> and the time column</li>
-</ol>
-</div></div>
-<div class="demo-col"><div class="demo-panel"><h3>Watch for</h3><ul>
-<li>Asset: <code>200 (memory cache)</code> on reload; shell: <code>304</code> or a quick revalidated <code>200</code></li>
-<li><code>/api/status</code>: <code>MISS</code> near 300 ms, then <code>HIT</code> in a few ms</li>
-</ul>
-</div><div class="demo-panel demo-panel--fallback"><h3>If it fails</h3><p>Run <code>npm test</code> in the sample and read the eight passing test names aloud.</p>
-</div></div>
-</div></div></div>
-<div class="sources"><span class="sr-only">Sources: </span><ul><li>Course — <a href="../samples/react-node-cache/README.md"><code>react-node-cache</code> README</a></li></ul></div>
-
-</section>
-<section class="slide slide--table has-sources" data-layout="table" data-phase="content" data-source-block="B" data-source-slide="14" data-title="Service workers: you write the caching strategy yourself" aria-label="Slide 14: Service workers: you write the caching strategy yourself">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching layers</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>14</b> / 19</span></div>
-<div class="slide-body"><div class="fit"><h1>Service workers: you write the caching strategy yourself</h1>
-<div class="table-wrap"><table><thead><tr><th>Strategy</th><th>What it does</th><th>Use it for</th></tr></thead><tbody><tr><td><strong>Cache first</strong></td><td>Answer from Cache Storage; network only on a miss</td><td>Hashed assets, fonts, the app shell</td></tr><tr><td><strong>Network first</strong></td><td>Try the network; fall back to the cache when offline</td><td>Pages and API data that should be current</td></tr><tr><td><strong>Stale-while-revalidate</strong></td><td>Answer from cache now, refresh it in the background</td><td>Avatars, non-critical lists, news feeds</td></tr><tr><td><strong>Network only</strong></td><td>Never cache</td><td>Sign-in, payments, anything personal and live</td></tr><tr><td><strong>Cache only</strong></td><td>Never touch the network</td><td>Files pre-cached at install time</td></tr></tbody></table></div></div></div>
-<div class="sources"><span class="sr-only">Sources: </span><ul><li>Chrome for Developers — <a href="https://developer.chrome.com/docs/workbox/caching-strategies-overview">Workbox caching strategies</a></li></ul></div>
-
-</section>
-<section class="slide slide--two-column" data-layout="two-column" data-phase="content" data-source-block="B" data-source-slide="15" data-title="The two hard problems: stale data and stampedes" aria-label="Slide 15: The two hard problems: stale data and stampedes">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching layers</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>15</b> / 19</span></div>
-<div class="slide-body"><div class="fit"><h1>The two hard problems: stale data and stampedes</h1>
-<div class="cols"><div class="col"><h3>Throwing copies away</h3>
+<section class="slide slide--two-column" data-layout="two-column" data-phase="content" data-source-block="B" data-source-slide="6" data-title="Browser test 2: compare a first visit with a repeat visit" aria-label="Slide 6: Browser test 2: compare a first visit with a repeat visit">
+<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching in practice</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>6</b> / 12</span></div>
+<div class="slide-body"><div class="fit"><h1>Browser test 2: compare a first visit with a repeat visit</h1>
+<div class="cols"><div class="col"><h3>First visit</h3>
 <ul>
-<li><strong>TTL:</strong> simplest; accept staleness up to N seconds</li>
-<li><strong>Delete on write:</strong> exact, but only where you can reach (Redis, not browsers)</li>
-<li><strong>New name:</strong> hashed files and versioned keys like <code>status:v1</code> → <code>v2</code></li>
-<li><strong>Purge:</strong> ask the CDN to forget a URL — slow, and never reaches browsers</li>
+<li>Open a page in a fresh private window</li>
+<li>Keep the Network panel open and reload</li>
+<li>Note which large images and files cross the network</li>
+<li>Record the response size and time</li>
 </ul>
-</div><div class="col"><h3>Surviving a cold cache</h3>
+</div><div class="col"><h3>Repeat visit</h3>
 <ul>
-<li>A popular key expires and 1,000 requests miss at once: a <strong>stampede</strong></li>
-<li><strong>Coalesce:</strong> one loader per key (the <code>inflight</code> map)</li>
-<li><strong>Serve stale while refreshing:</strong> answer with the old copy, update behind it</li>
-<li><strong>Jitter TTLs</strong> so a thousand keys do not expire in the same second</li>
+<li>Reload the same page in the same window</li>
+<li>Compare the same files and headers</li>
+<li>Repeat after clearing only that site&#39;s stored data</li>
+<li>Explain which copy answered each request</li>
 </ul>
 </div></div></div></div>
 
 
 </section>
-<section class="slide slide--table has-sources" data-layout="table" data-phase="content" data-source-block="B" data-source-slide="16" data-title="The header vocabulary, as reference — what each one is for" aria-label="Slide 16: The header vocabulary, as reference — what each one is for">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching layers</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>16</b> / 19</span></div>
-<div class="slide-body"><div class="fit"><h1>The header vocabulary, as reference — what each one is for</h1>
-<div class="table-wrap"><table><thead><tr><th>You want…</th><th>Header / directive</th><th>Layer it talks to</th></tr></thead><tbody><tr><td>Keep a hashed file for a year</td><td><code>public, max-age=31536000, immutable</code></td><td>Browser + CDN</td></tr><tr><td>Cache, but check before each reuse</td><td><code>no-cache</code> + an <code>ETag</code> (answer: <code>304</code>)</td><td>Browser + CDN</td></tr><tr><td>Never store it anywhere</td><td><code>no-store</code> (<code>private</code> = this user&#39;s browser only)</td><td>Every layer</td></tr><tr><td>Different lifetime for shared caches</td><td><code>s-maxage=N</code> (overrides <code>max-age</code> at the CDN)</td><td>CDN, proxies</td></tr><tr><td>Serve stale while refreshing or during an outage</td><td><code>stale-while-revalidate</code>, <code>stale-if-error</code></td><td>Browser + CDN</td></tr><tr><td>Add a request header to the cache key</td><td><code>Vary: Accept-Encoding</code> (or a CDN key rule)</td><td>Browser + CDN</td></tr></tbody></table></div></div></div>
-<div class="sources"><span class="sr-only">Sources: </span><ul><li>MDN — <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Caching">HTTP caching</a></li><li>IETF — <a href="https://www.rfc-editor.org/rfc/rfc9111.html">RFC 9111, HTTP Caching</a></li><li>Course — <a href="../reference.md">Week 5 reference</a></li></ul></div>
-
-</section>
-<section class="slide slide--bullets has-sources" data-layout="bullets" data-phase="content" data-source-block="B" data-source-slide="17" data-title="The edge also shrinks the bytes it serves" aria-label="Slide 17: The edge also shrinks the bytes it serves">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching layers</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>17</b> / 19</span></div>
-<div class="slide-body"><div class="fit"><h1>The edge also shrinks the bytes it serves</h1>
+<section class="slide slide--bullets has-sources" data-layout="bullets" data-phase="content" data-source-block="B" data-source-slide="7" data-title="Browser test 3: look for shared-edge evidence" aria-label="Slide 7: Browser test 3: look for shared-edge evidence">
+<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching in practice</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>7</b> / 12</span></div>
+<div class="slide-body"><div class="fit"><h1>Browser test 3: look for shared-edge evidence</h1>
 <ul>
-<li><strong>Compression:</strong> Brotli or gzip on text (HTML, JS, CSS, JSON) — often 60–80% smaller</li>
-<li>The browser says what it accepts (<code>Accept-Encoding</code>); the server or CDN picks one</li>
-<li><strong>Images</strong> are usually the heaviest bytes: AVIF or WebP, sized with <code>srcset</code>, with <code>width</code> and <code>height</code> set</li>
-<li>Many CDNs compress and resize images for you at the PoP — it is a setting, not code</li>
-<li>HW5 Task 4 asks you to <strong>measure</strong> this on your deployment, not assume it</li>
+<li>Select a large public image, poster, or media segment in the Network panel</li>
+<li>Inspect response headers for cache age, cache status, and the declared lifetime</li>
+<li>Refresh several times; compare response time and transfer size</li>
+<li>If available, compare the same public resource from another network or region</li>
+<li>Treat a missing cache header as “unknown,” not proof that no cache exists</li>
 </ul>
 </div></div>
-<div class="sources"><span class="sr-only">Sources: </span><ul><li>MDN — <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Compression">Compression in HTTP</a></li><li>MDN — <a href="https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Responsive_images">Responsive images</a></li></ul></div>
+<div class="sources"><span class="sr-only">Sources: </span><ul><li>MDN — <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Caching">Web caching</a></li><li>Cloudflare — <a href="https://developers.cloudflare.com/cache/how-to/understanding-cache-status/">Understanding cache responses</a></li></ul></div>
 
 </section>
-<section class="slide slide--checkpoint has-sources" data-layout="checkpoint" data-phase="content" data-source-block="B" data-source-slide="18" data-title="Design the cache for two CampusPulse features" aria-label="Slide 18: Design the cache for two CampusPulse features">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching layers</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>18</b> / 19</span></div>
+<section class="slide slide--table" data-layout="table" data-phase="content" data-source-block="B" data-source-slide="8" data-title="Test that a copy is fresh enough—and belongs to the right person" aria-label="Slide 8: Test that a copy is fresh enough—and belongs to the right person">
+<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching in practice</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>8</b> / 12</span></div>
+<div class="slide-body"><div class="fit"><h1>Test that a copy is fresh enough—and belongs to the right person</h1>
+<div class="table-wrap"><table><thead><tr><th>Test</th><th>What students do</th><th>What a good result means</th></tr></thead><tbody><tr><td>Freshness</td><td>Change a public title or image, then reload</td><td>The new version appears within the promised window</td></tr><tr><td>Personalization</td><td>Sign in as account A, then account B in a separate profile</td><td>Neither account sees the other&#39;s name, list, or history</td></tr><tr><td>Shared-device safety</td><td>Sign out, then revisit the previous account&#39;s page</td><td>Private data is not left visible to the next person</td></tr><tr><td>Offline behavior</td><td>Disconnect after opening a page, then revisit it</td><td>The app clearly distinguishes saved content from current data</td></tr><tr><td>Cache reset</td><td>Clear that site&#39;s stored data, then repeat</td><td>The team can reproduce a true first visit</td></tr></tbody></table></div></div></div>
+
+
+</section>
+<section class="slide slide--two-column" data-layout="two-column" data-phase="content" data-source-block="B" data-source-slide="9" data-title="Real product examples: same idea, different copy" aria-label="Slide 9: Real product examples: same idea, different copy">
+<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching in practice</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>9</b> / 12</span></div>
+<div class="slide-body"><div class="fit"><h1>Real product examples: same idea, different copy</h1>
+<div class="cols"><div class="col"><h3>Streaming catalog</h3>
+<ul>
+<li>Posters, artwork, and public title details are reused by many viewers</li>
+<li>Nearby shared copies reduce delay and origin traffic</li>
+<li>A corrected rating or artwork must eventually replace the old copy</li>
+<li>Each account&#39;s watch progress stays personal</li>
+</ul>
+</div><div class="col"><h3>Collaboration app</h3>
+<ul>
+<li>App files, help pages, and public profile images are reusable</li>
+<li>Meeting membership and a participant&#39;s private messages are not public</li>
+<li>Live audio and video must arrive now, not from an old saved copy</li>
+<li>A brief interruption is different from stale playback</li>
+</ul>
+</div></div></div></div>
+
+
+</section>
+<section class="slide slide--bullets" data-layout="bullets" data-phase="content" data-source-block="B" data-source-slide="10" data-title="Diagnose a slow page without reading its code" aria-label="Slide 10: Diagnose a slow page without reading its code">
+<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching in practice</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>10</b> / 12</span></div>
+<div class="slide-body"><div class="fit"><h1>Diagnose a slow page without reading its code</h1>
+<ul>
+<li><strong>Large transfer, first visit:</strong> investigate image size, resolution, and delivery distance</li>
+<li><strong>Repeated download on every visit:</strong> ask whether the file has a reusable lifetime</li>
+<li><strong>Fast but outdated result:</strong> shorten the freshness window or improve version replacement</li>
+<li><strong>One account sees another&#39;s data:</strong> remove shared reuse and investigate account boundaries</li>
+<li><strong>A warm edge still loads slowly:</strong> look beyond caching; the server, page, or connection may be the bottleneck</li>
+</ul>
+
+<aside class="callout callout--key" role="note"><p class="callout-head"><span class="ico" aria-hidden="true">◆</span><span>Key idea</span></p><p>A cache is one part of the path. It cannot make every kind of delay disappear.</p>
+</aside></div></div>
+
+
+</section>
+<section class="slide slide--checkpoint" data-layout="checkpoint" data-phase="content" data-source-block="B" data-source-slide="11" data-title="Choose the cache plan for three features" aria-label="Slide 11: Choose the cache plan for three features">
+<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching in practice</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>11</b> / 12</span></div>
 <div class="slide-body"><div class="fit"><p class="cp-banner"><span aria-hidden="true">◇</span> Active checkpoint</p>
-<h1>Design the cache for two CampusPulse features</h1>
+<h1>Choose the cache plan for three features</h1>
 
-<div class="cp-meta"><span><b>10 min</b></span><span>Individual (4 min) → compare with a neighbor (2 min) → cold call (4 min)</span></div>
+<div class="cp-meta"><span><b>6 min</b></span><span>Small groups (3 min) → compare answers (2 min) → debrief (1 min)</span></div>
 <ol>
-<li><strong>Building hours</strong> (<code>/api/buildings/hours</code>): same for everyone, edited by staff about once a week, read on every page load</li>
-<li><strong>&quot;My reports&quot;</strong> (<code>/api/me/reports</code>): a signed-in student&#39;s own outage reports, updated when they file one</li>
+<li><strong>New-release posters:</strong> shared by viewers; may be corrected by the studio</li>
+<li><strong>My continue-watching row:</strong> unique to the signed-in account; changes during viewing</li>
+<li><strong>A live event schedule:</strong> public; organizers may revise it shortly before the event</li>
 </ol>
-<p>For each, name the <strong>layer(s)</strong>, the <strong>key</strong>, <strong>how it is invalidated</strong>, and <strong>one line of config</strong> (header or code).</p>
+<p>For each, choose <strong>where a copy may live</strong>, <strong>how quickly it must update</strong>, and <strong>one browser observation</strong> that would help you verify the experience.</p>
 </div></div>
-<div class="sources"><span class="sr-only">Sources: </span><ul><li>Course — <a href="../samples/react-node-cache/README.md"><code>react-node-cache</code> sample</a></li></ul></div>
+
 
 </section>
-<section class="slide slide--bullets" data-layout="bullets" data-phase="content" data-source-block="B" data-source-slide="19" data-title="What Block C does with this" aria-label="Slide 19: What Block C does with this">
-<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching layers</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>19</b> / 19</span></div>
-<div class="slide-body"><div class="fit"><h1>What Block C does with this</h1>
+<section class="slide slide--bullets" data-layout="bullets" data-phase="content" data-source-block="B" data-source-slide="12" data-title="The practical rule" aria-label="Slide 12: The practical rule">
+<div class="f-rail" aria-hidden="true"></div><div class="f-label"><b>W05·B</b> &nbsp;Caching in practice</div><div class="f-foot"><span class="f-course">CSC 436 — Web Application Systems</span><span class="f-num"><b>12</b> / 12</span></div>
+<div class="slide-body"><div class="fit"><h1>The practical rule</h1>
 <ul>
-<li>Caching is a performance claim. Block C asks: <strong>did it actually help a person?</strong></li>
-<li>Core Web Vitals (LCP, INP, CLS) and the rendering choice behind them</li>
-<li>Accessibility checks that tools catch and the ones they miss</li>
-<li>Logs, metrics, traces, and an SLO — so you know when the cache hides a failure</li>
-<li>Then the lab: reproduce the Luis/Maya leak on your laptop, fix it, and measure</li>
+<li>Cache <strong>shared, repeatable</strong> content close to viewers</li>
+<li>Keep <strong>personal</strong> content isolated to the correct account</li>
+<li>Give changing content a freshness promise the product can keep</li>
+<li>Use browser evidence to test reuse, freshness, and privacy</li>
 </ul>
-</div></div>
+
+<aside class="callout callout--key" role="note"><p class="callout-head"><span class="ico" aria-hidden="true">◆</span><span>Key idea</span></p><p>Next: two products with video—and why their architectures need different answers.</p>
+</aside></div></div>
 
 
 </section>
@@ -1536,7 +1438,7 @@ status summary too — forgetting a <strong>dependent key</strong> is the classi
 </div>
 
 <div class="overlay" id="overview" aria-hidden="true" aria-label="Slide overview">
-  <h2>Overview — Caching technologies, layer by layer</h2>
+  <h2>Overview — Caching without the code tour</h2>
   <div class="ov-grid" id="ov-grid"></div>
 </div>
 

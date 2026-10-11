@@ -253,679 +253,281 @@ Read the captured trace in the speaker notes aloud and point at `colo=`.
 - Then one **complete React + Node example**: Vite build, Express headers, a Redis cache-aside, and invalidation on write
 - HW5 asks you to design that stack for your own CampusPulse and prove it works
 
-## Block B — Caching layers
+## Block B — Caching in practice
 
-### Caching technologies, layer by layer
+### Caching without the code tour
 
-Browser, service worker, React data cache, CDN, reverse proxy, Redis, and the database — and one React + Node app that configures four of them
+Choose what to cache, see what the browser did, and test whether a copy is safe and fresh
 
-Every fast app is a stack of caches. Today you see the whole stack, then configure four layers of it in one React + Node app.
+A cache is a reusable copy. The design question is not “how do I write the cache code?” It is “which copy can safely answer this request, and how will I know it is still useful?”
 
-### The cache stack, from the tab to the database
+### One request may meet several copies before the source
 
-![Seven caching layers in a row from user to data. Browser HTTP cache and service worker, both inside the user](../../assets/class-notes/week05-session-s21-1.svg)
+- A request may stop at the browser, a nearby shared edge, or an application service
+- Each copy must be safe for its audience and fresh enough for the feature
+- Use browser evidence to tell whether reuse happened and whether it helped
 
-*Each layer is closer to the user, faster, and knows less about whether its copy is still true*
+> **Key idea**
+>
+> Caching trades repeated work for a temporary promise about sameness.
 
-### What each layer is good at, and who uses it
+### The path a page request can take
 
-| Layer | Best for | Real-world example |
+![A request flows from a viewer](../../assets/class-notes/week05-session-s22-1.svg)
+
+*A request stops at the first safe, sufficiently fresh copy*
+
+### Choose the copy by asking who it is for
+
+| Example | Audience | Typical choice | The question to debate |
+| --- | --- | --- | --- |
+| Movie poster | Everyone | Shared edge copy | How quickly must a correction appear? |
+| Signed-in watch list | One account | Personal browser or account-aware service | Could another account ever receive it? |
+| Public service status | Everyone | Short-lived shared copy | How stale is acceptable during an outage? |
+| Profile page shell | Everyone | Shared, versioned files | How does a new release replace old files? |
+| Available seats | Everyone, but changing quickly | Very brief or no shared copy | Could a stale answer cause a bad booking? |
+
+### Browser test 1: did the page reuse its own files?
+
+- Open the browser's **Network** panel and reload a page
+- Reload again; compare images, styles, and scripts with the first visit
+- Look for “memory cache,” “disk cache,” “not modified,” or a much smaller transfer
+- Select a resource and inspect its response headers for its freshness policy
+
+> **Key idea**
+>
+> The evidence is a changed source of the response or fewer bytes—not just a page that feels fast.
+
+### Browser test 2: compare a first visit with a repeat visit
+
+#### First visit
+
+- Open a page in a fresh private window
+- Keep the Network panel open and reload
+- Note which large images and files cross the network
+- Record the response size and time
+
+#### Repeat visit
+
+- Reload the same page in the same window
+- Compare the same files and headers
+- Repeat after clearing only that site's stored data
+- Explain which copy answered each request
+
+### Browser test 3: look for shared-edge evidence
+
+- Select a large public image, poster, or media segment in the Network panel
+- Inspect response headers for cache age, cache status, and the declared lifetime
+- Refresh several times; compare response time and transfer size
+- If available, compare the same public resource from another network or region
+- Treat a missing cache header as “unknown,” not proof that no cache exists
+
+**Sources**
+
+- MDN — [Web caching](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Caching)
+- Cloudflare — [Understanding cache responses](https://developers.cloudflare.com/cache/how-to/understanding-cache-status/)
+
+### Test that a copy is fresh enough—and belongs to the right person
+
+| Test | What students do | What a good result means |
 | --- | --- | --- |
-| **React data cache** | Not refetching the same API data on every render or route change | TanStack Query in a React dashboard |
-| **Service worker** | Offline and instant repeat loads; app-shell caching | Offline-capable progressive web apps |
-| **Browser HTTP cache** | JS, CSS, images, fonts with long lifetimes | Every site: hashed bundle files |
-| **CDN edge** | Static files and public responses near users | Video segments, product images, `/api/status` |
-| **Reverse proxy** | Caching whole responses in front of slow app servers | Nginx `proxy_cache`, Varnish on news sites |
-| **App cache (Redis)** | Expensive query results, sessions, rate-limit counters | Facebook's memcache tier — billions of requests a second |
+| Freshness | Change a public title or image, then reload | The new version appears within the promised window |
+| Personalization | Sign in as account A, then account B in a separate profile | Neither account sees the other's name, list, or history |
+| Shared-device safety | Sign out, then revisit the previous account's page | Private data is not left visible to the next person |
+| Offline behavior | Disconnect after opening a page, then revisit it | The app clearly distinguishes saved content from current data |
+| Cache reset | Clear that site's stored data, then repeat | The team can reproduce a true first visit |
 
-**Sources**
+### Real product examples: same idea, different copy
 
-- MDN — [Service Worker API](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API)
-- Varnish — [Introduction](https://varnish-cache.org/intro/) · Nginx — [`proxy_cache`](https://nginx.org/en/docs/http/ngx_http_proxy_module.html)
-- USENIX NSDI '13 — [Scaling Memcache at Facebook](https://www.usenix.org/conference/nsdi13/technical-sessions/presentation/nishtala)
-- AWS — [Caching overview](https://aws.amazon.com/caching/)
+#### Streaming catalog
 
-### Four questions pick the layer for you
+- Posters, artwork, and public title details are reused by many viewers
+- Nearby shared copies reduce delay and origin traffic
+- A corrected rating or artwork must eventually replace the old copy
+- Each account's watch progress stays personal
 
-- **Who may see this copy?** One user → device layers only. Everyone → any layer
-- **How stale may it be?** Never → don't cache, or revalidate every time. Seconds → short TTL. Forever → hashed name
-- **How expensive is a miss?** A 300 ms query hit 1,000 times a minute is worth caching; a 2 ms lookup may not be
-- **How will you throw it away?** Expire on a timer, delete on write, or change the name — decide **before** caching
+#### Collaboration app
 
-> **Key idea**
->
-> If you cannot answer the fourth question, you are not ready to add the cache.
-> Stale data that you cannot remove is a bug you shipped on purpose.
+- App files, help pages, and public profile images are reusable
+- Meeting membership and a participant's private messages are not public
+- Live audio and video must arrive now, not from an old saved copy
+- A brief interruption is different from stale playback
 
-### CampusPulse in React + Node, cached end to end
+### Diagnose a slow page without reading its code
 
-### Four kinds of response, four caching decisions
-
-![The CampusPulse sample architecture. A browser talks through a CDN to one Express server. Express serves four kinds of response. Hashed assets: cached by browser and CDN for one year. The index.html shell: no-cache, revalidated every load. API status: public for 10 seconds at browser and CDN, plus Redis for 10 seconds. API incidents: no-cache for browsers and CDN, Redis for 30 seconds with delete on write. API me: private, no-store, never cached. Redis or in-memory cache sits beside Express, and a slow database sits behind it.](../../assets/class-notes/week05-session-s25-1.svg)
-
-*One Express server serves the React build and the API, and makes a different caching decision for each route*
-
-**Sources**
-
-- Course — [`react-node-cache` sample](samples/react-node-cache/README.md)
-
-### Step 1 — Vite already fingerprints your build
-
-```text title="npm run build — what Vite writes to dist/"
-dist/
-├── index.html                ← small; names the current bundle
-└── assets/
-    ├── index-C4c61eeb.js     ← the hash changes when the bytes change
-    └── index-9b73e0aa.css
-
-# index.html after the build:
-<script type="module" src="/assets/index-C4c61eeb.js"></script>
-```
+- **Large transfer, first visit:** investigate image size, resolution, and delivery distance
+- **Repeated download on every visit:** ask whether the file has a reusable lifetime
+- **Fast but outdated result:** shorten the freshness window or improve version replacement
+- **One account sees another's data:** remove shared reuse and investigate account boundaries
+- **A warm edge still loads slowly:** look beyond caching; the server, page, or connection may be the bottleneck
 
 > **Key idea**
 >
-> New code → new filename → a URL no cache has ever seen. That is why the files
-> can be cached for a year with nothing to purge, and why `index.html` cannot.
+> A cache is one part of the path. It cannot make every kind of delay disappear.
 
-**Sources**
+### Choose the cache plan for three features
 
-- Vite — [Building for production](https://vite.dev/guide/build)
+1. **New-release posters:** shared by viewers; may be corrected by the studio
+2. **My continue-watching row:** unique to the signed-in account; changes during viewing
+3. **A live event schedule:** public; organizers may revise it shortly before the event
 
-### Step 2 — Express: long-lived assets, a shell that always checks
+For each, choose **where a copy may live**, **how quickly it must update**, and **one browser observation** that would help you verify the experience.
 
-```js title="server.mjs — static files and the SPA shell"
-// Hashed build output: new bytes get a new URL, so browsers and
-// CDNs may keep these for a year. A missing asset is a 404.
-app.use("/assets", express.static(resolve(distDir, "assets"), {
-  immutable: true, maxAge: "1y", index: false, fallthrough: false,
-}));
-// → Cache-Control: public, max-age=31536000, immutable
+### The practical rule
 
-// The shell names the current hashes, so every load checks for a
-// newer deploy — a cheap 304 Not Modified when nothing changed.
-app.get("/{*splat}", (req, res) => {
-  res.set("Cache-Control", "no-cache");
-  res.sendFile("index.html", { root: distDir });
-});
-```
-
-**Sources**
-
-- Express 5 — [`express.static` and `res.sendFile`](https://expressjs.com/en/5x/api.html)
-
-### Step 3 — one Cache-Control decision per API route
-
-```js title="server.mjs — the API routes"
-app.get("/api/status", async (req, res) => {        // same for everyone
-  const { value, state } = await cached("status:v1", 10, () => db.status());
-  res.set({ "Cache-Control": "public, max-age=10", "X-Cache": state });
-  res.json(value);
-});
-
-app.get("/api/incidents", async (req, res) => {     // changes on writes
-  const { value, state } = await cached("incidents:open:v1", 30,
-    () => db.openIncidents());
-  res.set({ "Cache-Control": "no-cache", "X-Cache": state });
-  res.json({ incidents: value });
-});
-
-app.get("/api/me", (req, res) => {                  // one user only
-  res.set("Cache-Control", "private, no-store");
-  // … read the session cookie and respond …
-});
-```
-
-### Step 4 — cache-aside, with a stampede guard
-
-```js title="server.mjs — the cached() helper"
-async function cached(key, ttlSeconds, load) {
-  const hit = await store.get(key);
-  if (hit !== null) return { value: JSON.parse(hit), state: "HIT" };
-  if (!inflight.has(key)) {                      // first miss does the work
-    inflight.set(key, (async () => {
-      try {
-        const value = await load();
-        await store.setEx(key, ttlSeconds, JSON.stringify(value));
-        return value;
-      } finally {
-        inflight.delete(key);
-      }
-    })());
-  }
-  return { value: await inflight.get(key), state: "MISS" };
-}
-```
-
-**Sources**
-
-- Redis — [Caching](https://redis.io/solutions/caching/) · [Node.js client](https://redis.io/docs/latest/develop/clients/nodejs/)
-
-### Step 5 — every write deletes the keys it changed
-
-```js title="server.mjs — POST /api/incidents (validation trimmed)"
-app.post("/api/incidents", jsonBody, async (req, res) => {
-  // … refuse unless writes are enabled; validate title and service …
-  const created = await db.createIncident({ title: title.trim(), service });
-  await Promise.all([store.del("incidents:open:v1"), store.del("status:v1")]);
-  res.status(201).location(`/api/incidents/${created.id}`).json(created);
-});
-```
+- Cache **shared, repeatable** content close to viewers
+- Keep **personal** content isolated to the correct account
+- Give changing content a freshness promise the product can keep
+- Use browser evidence to test reuse, freshness, and privacy
 
 > **Key idea**
 >
-> The next read is a `MISS` and loads fresh data. A new incident changes the
-> status summary too — forgetting a **dependent key** is the classic bug.
+> Next: two products with video—and why their architectures need different answers.
 
-### Step 6 — React keeps one shared copy in the tab
+## Block C — Video architectures
 
-```jsx title="StatusBanner.jsx — TanStack Query as the client cache"
-import { useQuery } from "@tanstack/react-query";
+### Two kinds of video, two caching architectures
 
-export function StatusBanner() {
-  const { data, isPending } = useQuery({
-    queryKey: ["status"],
-    queryFn: () => fetch("/api/status").then((r) => r.json()),
-    staleTime: 10_000,   // every component shares one copy for 10 s
-  });
-  if (isPending) return <p>Checking services…</p>;
-  const down = data.services.filter((s) => s.state !== "operational");
-  return <p>{down.length ? `${down.length} degraded` : "All clear"}</p>;
-}
-```
+How streaming libraries scale—and why live meetings cannot reuse yesterday's media
 
-**Sources**
+Netflix, Disney+, Zoom, and Teams all show video. Their delivery architectures solve different problems.
 
-- TanStack Query — [Caching examples](https://tanstack.com/query/latest/docs/framework/react/guides/caching)
+### Start with the experience, not the vendor
 
-### Demo: watch the app cache absorb the load
+> **Key idea**
+>
+> A useful cache holds a reusable copy. A live participant's next sentence does not exist yet.
 
-#### Steps
+#### A movie or episode
 
-1. In `weeks/week05/samples/react-node-cache`: `npm install`, then `npm start`
-2. Open `http://127.0.0.1:3000/` with DevTools → Network, then reload
-3. Open `/api/status` and reload twice; read `X-Cache` and the time column
+- Prepared before playback begins
+- The same media serves many viewers
+- Delivery can favor reuse
 
-#### Expected observations
+#### A live meeting
 
-- Asset: `200 (memory cache)` on reload; shell: `304` or a quick revalidated `200`
-- `/api/status`: `MISS` near 300 ms, then `HIT` in a few ms
+- Participants create media as they speak
+- Each voice and camera stream is unique
+- Delivery must minimize delay
 
-#### Fallback
+### A streaming library has a control path and a media path
 
-Run `npm test` in the sample and read the eight passing test names aloud.
+![High-level video-on-demand architecture. A viewer](../../assets/class-notes/week05-session-s34-1.svg)
+
+*Video-on-demand separates the catalog and account control path from the large shared media path*
 
 **Sources**
 
-- Course — [`react-node-cache` README](samples/react-node-cache/README.md)
+- Course — [Editable streaming architecture diagram](diagrams/video-on-demand.drawio)
 
-### Service workers: you write the caching strategy yourself
+### What belongs in the shared streaming cache?
 
-| Strategy | What it does | Use it for |
+- **Strong candidates:** title artwork, public catalog details, and prepared video segments
+- **Usually short-lived:** a playback plan or title availability that may change
+- **Account-specific:** watch history, recommendations, and continue-watching position
+- **Not a cache policy:** treating every response as public because most titles are public
+
+> **Key idea**
+>
+> The media may be shared; the viewer's identity and viewing history are not.
+
+### Netflix and Disney+: a shared pattern, different delivery choices
+
+#### Netflix
+
+- Publishes the Open Connect program for placing content close to viewers
+- Can pre-position popular titles ahead of expected demand
+- A local copy absorbs repeated requests for the same prepared media
+- Product services still handle identity, discovery, and playback decisions
+
+#### Disney+
+
+- Uses large-scale streaming delivery and multiple content delivery partners
+- Can steer delivery among providers and regions as conditions change
+- Shared media copies reduce repeated long-distance transfers
+- Catalog and account services remain distinct from media delivery
+
+**Sources**
+
+- Netflix — [Open Connect content delivery](https://openconnect.netflix.com/)
+- Streaming Media — [Disney Streaming on multi-CDN load balancing](https://www.streamingmedia.com/Articles/ReadArticle.aspx?ArticleID=145721)
+
+### A meeting has a different path for every live conversation
+
+![High-level real-time meeting architecture. Two participants use a meeting application. Sign-in and meeting coordination services establish the meeting and select a media region. Each participant sends live audio and video to a nearby regional media relay, which forwards current streams to the other participants. Shared content delivery network copies are used for application files and help content, not as a store for live participant media.](../../assets/class-notes/week05-session-s37-1.svg)
+
+*Real-time meetings use shared application assets, but live participant media travels through low-latency relays*
+
+**Sources**
+
+- Course — [Editable meeting architecture diagram](diagrams/real-time-meeting.drawio)
+
+### Why Zoom and Teams cannot treat a meeting like a movie
+
+| Design question | Netflix or Disney+ library | Zoom or Microsoft Teams meeting |
 | --- | --- | --- |
-| **Cache first** | Answer from Cache Storage; network only on a miss | Hashed assets, fonts, the app shell |
-| **Network first** | Try the network; fall back to the cache when offline | Pages and API data that should be current |
-| **Stale-while-revalidate** | Answer from cache now, refresh it in the background | Avatars, non-critical lists, news feeds |
-| **Network only** | Never cache | Sign-in, payments, anything personal and live |
-| **Cache only** | Never touch the network | Files pre-cached at install time |
+| Is the media available before playback? | Usually yes; prepared before a viewer presses play | No; participants create it as they speak |
+| Can many people reuse the same media bytes? | Often yes; the title is shared | No; each participant's stream is unique to the meeting |
+| What is the delivery priority? | Smooth playback, startup, and picture quality | Low delay, stable conversation, and clear speech |
+| What can a shared edge cache well? | Artwork and prepared media segments | Application files and public resources |
+| What carries live media? | A nearby copy can serve the prepared segment | A live relay forwards current participant streams |
+| What happens when a copy is stale? | An older frame or title version may appear | Delayed speech makes conversation confusing |
 
-**Sources**
-
-- Chrome for Developers — [Workbox caching strategies](https://developer.chrome.com/docs/workbox/caching-strategies-overview)
-
-### The two hard problems: stale data and stampedes
-
-#### Throwing copies away
-
-- **TTL:** simplest; accept staleness up to N seconds
-- **Delete on write:** exact, but only where you can reach (Redis, not browsers)
-- **New name:** hashed files and versioned keys like `status:v1` → `v2`
-- **Purge:** ask the CDN to forget a URL — slow, and never reaches browsers
-
-#### Surviving a cold cache
-
-- A popular key expires and 1,000 requests miss at once: a **stampede**
-- **Coalesce:** one loader per key (the `inflight` map)
-- **Serve stale while refreshing:** answer with the old copy, update behind it
-- **Jitter TTLs** so a thousand keys do not expire in the same second
-
-### The header vocabulary, as reference — what each one is for
-
-| You want… | Header / directive | Layer it talks to |
-| --- | --- | --- |
-| Keep a hashed file for a year | `public, max-age=31536000, immutable` | Browser + CDN |
-| Cache, but check before each reuse | `no-cache` + an `ETag` (answer: `304`) | Browser + CDN |
-| Never store it anywhere | `no-store` (`private` = this user's browser only) | Every layer |
-| Different lifetime for shared caches | `s-maxage=N` (overrides `max-age` at the CDN) | CDN, proxies |
-| Serve stale while refreshing or during an outage | `stale-while-revalidate`, `stale-if-error` | Browser + CDN |
-| Add a request header to the cache key | `Vary: Accept-Encoding` (or a CDN key rule) | Browser + CDN |
-
-**Sources**
-
-- MDN — [HTTP caching](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Caching)
-- IETF — [RFC 9111, HTTP Caching](https://www.rfc-editor.org/rfc/rfc9111.html)
-- Course — [Week 5 reference](reference.md)
-
-### The edge also shrinks the bytes it serves
-
-- **Compression:** Brotli or gzip on text (HTML, JS, CSS, JSON) — often 60–80% smaller
-- The browser says what it accepts (`Accept-Encoding`); the server or CDN picks one
-- **Images** are usually the heaviest bytes: AVIF or WebP, sized with `srcset`, with `width` and `height` set
-- Many CDNs compress and resize images for you at the PoP — it is a setting, not code
-- HW5 Task 4 asks you to **measure** this on your deployment, not assume it
-
-**Sources**
-
-- MDN — [Compression in HTTP](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Compression)
-- MDN — [Responsive images](https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Responsive_images)
-
-### Design the cache for two CampusPulse features
-
-1. **Building hours** (`/api/buildings/hours`): same for everyone, edited by staff about once a week, read on every page load
-2. **"My reports"** (`/api/me/reports`): a signed-in student's own outage reports, updated when they file one
-
-For each, name the **layer(s)**, the **key**, **how it is invalidated**, and **one line of config** (header or code).
-
-**Sources**
-
-- Course — [`react-node-cache` sample](samples/react-node-cache/README.md)
-
-### What Block C does with this
-
-- Caching is a performance claim. Block C asks: **did it actually help a person?**
-- Core Web Vitals (LCP, INP, CLS) and the rendering choice behind them
-- Accessibility checks that tools catch and the ones they miss
-- Logs, metrics, traces, and an SLO — so you know when the cache hides a failure
-- Then the lab: reproduce the Luis/Maya leak on your laptop, fix it, and measure
-
-## Block C — Measure and observe
-
-### Measuring the human experience — and knowing when it breaks
-
-Core Web Vitals, accessibility as a release gate, and the smallest observability that would have told you
-
-Everything so far was about bytes. This block is about whether a person noticed.
-
-### Fictional CampusPulse case: fast page, failed experience
-
-#### The dashboard is green
-
-- LCP is `1.4 s`, INP is `110 ms`, and CLS is `0.02`
-- Every report request in the logs returns **200**
-- The release is declared healthy
-
-#### Maya cannot submit
-
-- Keyboard focus never reaches **Report outage**
-- The automated scanner reports no critical violation
-- A useful SLI is completed reports, split by input path, not page loads
-
-### Three vitals, and one of them replaced the one you learned
-
-- **LCP** — time to the largest visible element. Good is **≤ 2.5 s** at p75. Bad means slow origin, render-blocking CSS, or an unoptimized hero
-- **INP** — worst interaction to next paint. Good is **≤ 200 ms** at p75. Bad means long tasks on the main thread
-- **CLS** — unexpected layout movement. Good is **≤ 0.1**. Bad means unsized images, late banners, or a font swap
-
-> **Failure to avoid**
->
-> **INP replaced FID in March 2024.** If you learned First Input Delay, unlearn it.
-> FID timed only the *delay before* the first handler ran — a page could score a
-> perfect FID and still freeze for two seconds after every click.
-
-**Sources**
-
-- web.dev — [Core Web Vitals](https://web.dev/articles/vitals) · [INP](https://web.dev/articles/inp) · Google — [INP becomes a Core Web Vital](https://web.dev/blog/inp-cwv-launch)
-
-### Lab and field answer different questions
-
-- **Lab** — Lighthouse, WebPageTest, your CI. One device, one network, **reproducible**, so you can A/B a change
-- **Field** — `web-vitals` in your own app. Every device and network, **not reproducible**: you cannot re-run Tuesday
-- Lab gives you a **diagnosis** — which element, which script. Field gives you a **verdict** — is it bad, and for whom
-
-> **Caution**
->
-> **You will have no CrUX data, and that is correct.** Chrome's public field
-> dataset only covers origins above a popularity threshold. A project three people
-> have visited will never qualify — the absence of data is a property of the
-> dataset, not a defect in your site.
-
-**Sources**
-
-- Chrome — [CrUX methodology: eligibility](https://developer.chrome.com/docs/crux/methodology#eligibility)
-
-### A budget is a number you agreed to fail
-
-```console title="the same page, two delivery strategies — Lighthouse 13.4.1, mobile preset, 2026-08-15"
-                        /slow      /fast    budget   verdict
-  Performance score        59        100         —
-  First Contentful Paint  0.8 s     0.6 s     1.8 s   pass / pass
-  Largest Contentful Pt   3.7 s     0.8 s     2.5 s   FAIL / pass
-  Total Blocking Time    2750 ms      0 ms    200 ms  FAIL / pass
-  Cumulative Layout Shift    0          0       0.1   pass / pass
-
-  Same HTML. Same image. Three delivery changes:
-    render-blocking CSS on a slow response -> critical CSS inlined
-    unsized <img>                          -> width/height + fetchpriority
-    700 ms synchronous script              -> deferred, off critical path
-```
+### The middle ground: a live event broadcast
 
 > **Key idea**
 >
-> Same user-visible content. Only the resource scheduling and script execution
-> changed. **Delivery is a first-class engineering decision, not a deployment
-> detail.**
+> A live broadcast uses shared distribution, but its freshness window is measured in moments—not hours.
 
-### Windows: put both pages on screen and measure
+#### Like a streaming library
 
-```powershell title="PowerShell - repository root; Node 20+, no network needed"
-Set-Location .\weeks\week05\samples ; node origin.mjs  # Terminal A
-$o = 'http://127.0.0.1:8080'                          # Terminal B
-curl.exe -sS --noproxy '*' -o NUL -w '%{http_code} ' "$o/slow"
-curl.exe -sS --noproxy '*' -o NUL -w "%{http_code}`n" "$o/fast"
-# Expect: 200 200
-Start-Process "$o/slow"
-# Then F12 > Lighthouse > Navigation + Mobile > Analyze.
-# Repeat on /fast. Cleanup: Ctrl+C Terminal A when done.
-```
+- One event feed reaches many viewers
+- Regional edges distribute shared media
+- Viewers can reuse recent segments
 
-**Sources**
+#### Unlike a movie library
 
-- Course — [`/slow` and `/fast` handlers](samples/origin.mjs)
+- New media is created continuously
+- The newest segment must arrive quickly
+- Long-lived copies show the past
 
-### macOS: put both pages on screen and measure
+### Place caches where they help without changing the experience
 
-```bash title="macOS Terminal (zsh or bash) - Node 20+, no network"
-cd weeks/week05/samples && node origin.mjs   # Terminal A
-o='http://127.0.0.1:8080'                    # Terminal B
-curl -sS --noproxy '*' -o /dev/null -w '%{http_code} ' "$o/slow"
-curl -sS --noproxy '*' -o /dev/null -w '%{http_code}\n' "$o/fast"
-# Expect: 200 200
-open "$o/slow"
-# Then Cmd+Opt+I > Lighthouse > Navigation + Mobile > Analyze.
-# Repeat on /fast. Cleanup: Ctrl-C Terminal A when done.
-```
-
-**Sources**
-
-- Course — [`/slow` and `/fast` handlers](samples/origin.mjs)
-
-### Rendering strategy is a delivery decision, not a framework preference
-
-- **CSR** — cheapest origin; content waits on JS. The shell and assets still cache well, the *data* does not
-- **SSR** — content in the first response; costs origin work per request, **and it is dynamic: mind the cache key**
-- **SSG** — no origin work, fully edge-cacheable, and stale until you rebuild
-- **ISR** — SSG's economics with a bounded staleness window
-- Ask "how fresh must this be, is it the same for everyone, and who pays for it?" — that picks the strategy
-
-> **Key idea**
->
-> ISR is `stale-while-revalidate` implemented in your framework instead of your
-> CDN. You already know the semantics; only the vendor changed.
-
-### Accessibility
-
-### The scanner is clean-ish. The page is not usable
-
-```console title="axe-core 4.12.1 against samples/origin.mjs /a11y — real output, 2026-08-15"
-$ npx @axe-core/cli http://127.0.0.1:8080/a11y
-
-  Violation of "color-contrast" with 3 occurrences!
-  Violation of "image-alt"      with 1 occurrences!
-  Violation of "tabindex"       with 1 occurrences!
-
-  5 Accessibility issues detected.
-
-  Please note that only 20% to 50% of all accessibility issues can
-  automatically be detected. Manual testing is always required.
-```
-
-> **Caution**
->
-> That last paragraph is printed by the axe CLI itself, unprompted. **Deque ships
-> their scanner with a disclaimer about their scanner.** Read it as an
-> instruction, not a footnote.
-
-**Sources**
-
-- Deque — [axe-core rule descriptions](https://github.com/dequelabs/axe-core/blob/develop/doc/rule-descriptions.md)
-- W3C WAI — [How to Meet WCAG 2.2](https://www.w3.org/WAI/WCAG22/quickref/)
-
-### Demo: the scanner, then your hands off the mouse
-
-#### Steps
-
-1. Origin running? `node origin.mjs` in `weeks/week05/samples`
-2. Run the scanner. Read its own disclaimer aloud
-3. Click once into the page, then **Tab, Enter, Escape** only
-
-#### Expected observations
-
-- 3 rules found; Enter does nothing; focus invisible
-
-#### Fallback
-
-No Chrome? Do step 3 alone. See `lab.md` §5b.
-
-**Sources**
-
-- Course — [the planted defects](samples/origin.mjs) · [lab §5](lab.md)
-
-### Windows: run the scanner, then open the page
-
-```powershell title="PowerShell - repo root; origin on 8080; Chrome at shown path"
-$a = 'http://127.0.0.1:8080/a11y'
-$chrome = Join-Path $env:ProgramFiles 'Google\Chrome\Application\chrome.exe'
-curl.exe -sS --noproxy '*' -o NUL -w "a11y=%{http_code}`n" $a
-# First npx use needs internet; adjust the browser path if necessary.
-npx --yes @axe-core/cli --version
-npx --yes @axe-core/cli $a --chrome-path $chrome
-Start-Process -FilePath $chrome -ArgumentList $a
-```
-
-**Sources**
-
-- Deque — [axe-core CLI](https://github.com/dequelabs/axe-core-npm/tree/develop/packages/cli)
-
-### macOS: run the scanner, then open the page
-
-```bash title="macOS Terminal - repo root; origin on 8080; Chrome installed"
-a='http://127.0.0.1:8080/a11y'
-chrome_dir='/Applications/Google Chrome.app/Contents/MacOS'
-chrome="$chrome_dir/Google Chrome"
-curl -sS --noproxy '*' -o /dev/null -w 'a11y=%{http_code}\n' "$a"
-# First npx use needs internet; adjust the browser path if necessary.
-npx --yes @axe-core/cli --version
-npx --yes @axe-core/cli "$a" --chrome-path "$chrome"
-open -a "Google Chrome" "$a"
-```
-
-**Sources**
-
-- Deque — [axe-core CLI](https://github.com/dequelabs/axe-core-npm/tree/develop/packages/cli)
-
-### The same page, keyboard only
-
-#### What axe reported
-
-- 3 low-contrast elements
-- 1 image with no `alt`
-- 1 positive `tabindex`
-
-Lighthouse accessibility: **80 / 100**
-
-The `label` rule **passed**, 2 nodes.
-
-#### What Tab and Enter found
-
-- Focus is **invisible** — `:focus { outline: none }`
-- The Submit "button" is a `div` — **Enter does nothing**
-- The dialog ignores Escape and strands focus
-- The "label" is a **placeholder**; it vanishes as you type
-
-### The exact keystrokes, and what to watch for
-
-| Press | On | Watch for |
-| --- | --- | --- |
-| `Tab` ×1 | from the address bar | Focus lands on "Back to status" — **last** visually |
-| `Tab` ×2 | to Building code | The placeholder is the only label |
-| any key | in Building code | The label is gone while you type |
-| `Enter` | on **Submit report** | Nothing happens — it is a `div` |
-| mouse, then `Escape` | the help dialog | It stays open; focus never entered |
-
-**Sources**
-
-- W3C WAI — [Keyboard accessibility](https://www.w3.org/WAI/perspective-videos/keyboard/)
-
-### What this page proves, and what it does not
-
-- **Real:** every defect above is a pattern that ships in production code, and the keyboard finds all of them
-- **Real:** the scanner's own printed disclaimer is its vendor's position, not ours
-- **Fixture:** the defect list is curated and documented — a real page has no answer key
-- **Pinned:** 3 rules / 5 occurrences is **axe-core 4.12.1**; a newer build may catch more, or fewer
-- **Not a score:** Lighthouse gave this page **80 / 100**, and a keyboard user cannot submit the form
-
-> **Caution**
->
-> "The scanner found nothing" is not a result on your own app until you have
-> also done the five-minute keyboard pass. The scan and the pass answer different
-> questions.
-
-### The five-minute keyboard pass, before every release
-
-1. **Tab from the top.** Can you reach every control? Does the order match the visual order?
-2. **Can you see where you are?** If the focus ring is invisible, stop. Everything after this is guesswork
-3. **Enter and Space** on everything focusable. Does it do what clicking does?
-4. **Open a dialog.** Does focus move in, stay in, leave on Escape, and return where it started?
-5. **Cause an error.** Is it announced, associated with the field, and readable without colour?
-
-> **Tip**
->
-> Five minutes, no tools, no install. It finds more real defects than any scanner
-> you can buy, and you can run it on the pull request.
-
-### Windows: the fallbacks, and stopping the origin
-
-```powershell title="PowerShell - repository root"
-Get-Content .\weeks\week05\samples\k6-baseline-summary.txt
-Get-Content .\weeks\week05\samples\campuspulse-load-profile.js
-# Cleanup: Ctrl+C the origin in Terminal A, and close the tabs
-# on /a11y, /slow and /fast. That is the whole cleanup.
-# If 8080 looks busy, LOOK - never end what you did not start:
-Get-NetTCPConnection -LocalPort 8080 -State Listen -EA Ignore |
-  ForEach-Object { Get-Process -Id $_.OwningProcess }
-# Busy port? Use the saved captures; leave other processes alone.
-```
-
-**Sources**
-
-- Course — [captured k6 baseline](samples/k6-baseline-summary.txt) · [load profile](samples/campuspulse-load-profile.js)
-
-### macOS: the fallbacks, and stopping the origin
-
-```bash title="macOS Terminal (zsh or bash) - repository root"
-less weeks/week05/samples/k6-baseline-summary.txt      # q quits
-less weeks/week05/samples/campuspulse-load-profile.js
-# Cleanup: Ctrl-C the origin in Terminal A, and close the tabs
-# on /a11y, /slow and /fast. That is the whole cleanup.
-# If 8080 looks busy, LOOK - never end what you did not start:
-lsof -nP -iTCP:8080 -sTCP:LISTEN
-# Busy port? Use the saved captures; leave other processes alone.
-```
-
-**Sources**
-
-- Course — [captured k6 baseline](samples/k6-baseline-summary.txt) · [load profile](samples/campuspulse-load-profile.js)
-
-### Observability
-
-### Three telemetry signals
-
-- **Logs** — what happened once, as structured JSON
-- **Metrics** — how often, how slow
-- **Traces** — where the time went
-- Logs and traces join on `trace_id`
-- Metrics link to traces through exemplars — never put trace ids in metric labels
-
-> **Key idea**
->
-> The useful log field here is `"cache":"MISS"`: it turns "the API was slow" into "the edge missed."
-
-### An SLO is a sentence about users. A dashboard is not
-
-- **SLI** — the measurement. *"Proportion of `/api/status` requests served in under 500 ms"*
-- **SLO** — the target over a window. *"99% of those, over 28 days"*
-- **Error budget** — what the SLO permits you to lose: **1% of eligible requests**
-- Time-based instead? *"99% of one-minute windows are good"* — 1% of 28 days is **6 h 43 m**
-- **Alert on the SLI burning the budget** — not on CPU, not on a single 500
-
-> **Failure to avoid**
->
-> An alert that fires when nothing is wrong trains people to ignore it. The next
-> one is real, and by then nobody looks. **Alert fatigue is a design failure, not
-> a discipline failure.**
-
-**Sources**
-
-- Google SRE — [Service Level Objectives](https://sre.google/sre-book/service-level-objectives/) · [Alerting on SLOs](https://sre.google/workbook/alerting-on-slos/)
-
-### Your status page renders in 900 ms but nobody can submit a report. What tells you?
-
-1. Lighthouse in CI — scored 98 this morning
-2. An `axe` run in the pipeline — zero violations
-3. A metric: `http_requests_total{route="/incidents",status="2xx"}`
-4. An uptime check hitting `/healthz` every 60 s
-
-**Sources**
-
-- Google SRE — [Service Level Objectives](https://sre.google/sre-book/service-level-objectives/)
+- **Shared edge:** prepared media, posters, and public application resources
+- **Account services:** personal lists and viewing history, partitioned by account
+- **Meeting control:** membership and room details, kept current for participants
+- **Real-time media relays:** forward live streams; do not replay an old shared copy
+- **Recording archive:** once a meeting ends, its recording becomes a stored asset with a different freshness policy
 
 ## Individual practice
 
-### Individual lab: cache and experience
+### Sketch the right delivery for a championship final
 
-**Core: 30 min + 5 min recovery. Parts 1 and 3 are optional.**
+A service offers a recorded replay, a live broadcast, and a private watch party with voice chat.
 
-| Part | Focus | Min |
-| --- | --- | ---: |
-| 0 | Two terminals, two synthetic accounts | 3 |
-| 2 | Observe all four cache states | 8 |
-| 4 | Test account-page isolation | 7 |
-| 5 | `axe` plus keyboard access | 7 |
-| 6 | One SLI, SLO, and alert | 5 |
-
-**Sources**
-
-- Course — [Week 5 lab: full commands, expected output, and troubleshooting](lab.md)
+1. Which pieces can use a shared edge copy?
+2. Which requests must be personal or permission-checked?
+3. Which traffic must be routed live rather than served from a saved copy?
+4. What changes after the event ends?
 
 ## Homework brief
 
-### HW5 — Own the Edge
+### A high-level architecture sketch for your own app
 
-- Put a CDN in front of your domain and build a **cache-policy matrix**: at least
-  **six content classes**, each with its layer, key, invalidation, and rationale
-- Implement **one app-layer cache** (cache-aside, Redis or memory) with HIT/MISS evidence
-- Prove all four cache states, and reproduce **and revert** a cache-poisoning near-miss
-- Measure against a stated performance budget and pilot your own **RUM** with `web-vitals`
-- Run `axe` **and** record a keyboard-only walkthrough that finds **≥ 1 defect the scan missed**
-- Stand up one SLI, one SLO, and one alert that has **actually fired**
-
-> **Key idea**
->
-> 100 points · individual · due at the start of Week 6, before the midterm. This is
-> Gate 3 — Delivered and observable. Full handout: [`homework.md`](homework.md).
+- Choose a feature that serves the same content to many people
+- Draw the viewer, shared edge, application services, and source data
+- Mark one personal-data path that must not become a shared copy
+- State one freshness promise and what product risk it protects against
 
 ## Closing logistics
 
-### Before you leave
+### One product can contain several delivery architectures
 
-#### Released today
+- **Library playback:** cache prepared media close to many viewers
+- **Live broadcast:** distribute shared media with a short freshness window
+- **Meeting conversation:** route unique, current streams through low-delay relays
+- **Account experience:** keep personal data separate from all shared media copies
 
-- The [midterm blueprint](../../midterm/blueprint.md) and a
-  [practice forensic case](../../midterm/practice-case.md)
-- **The midterm is Week 6.** Sit the practice case **this week**, closed-book and
-  timed, while Weeks 1–5 are still warm
-- Also complete the [Week 6 prep](../week06/prep.md) before class
-
-#### Exit ticket — one line
-
-- Write one SLO for a feature on your own project, in the form: *"X% of \<action\>
-  complete in under Y, measured over Z days."*
+> **Key idea**
+>
+> Ask what can be reused, by whom, and for how long. Those answers shape the architecture.

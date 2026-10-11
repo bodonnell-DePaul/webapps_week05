@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CSC 436 — Midterm Practice Exam - CSC 436</title>
+<link rel="stylesheet" href="../assets/course.css">
+<link rel="icon" type="image/svg+xml" href="../assets/course-icon.svg">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header><a class="course-name" href="../index.html">CSC 436</a>
+<nav aria-label="Course">
+<a href="../docs/getting-started.html">Start here</a>
+<a href="../docs/new_syllabus.html">Syllabus</a>
+<a href="../docs/course-map.html">Course map</a>
+<a href="../final-project/index.html">Final project</a>
+</nav></header>
+<main id="main">
+<p class="source-link"><a href="practice-exam.md" download>Download Markdown source</a></p>
+<h1 id="csc-436--midterm-practice-exam">CSC 436 — Midterm Practice Exam</h1>
+<h2 id="full-length-practice--weeks-15--same-format-as-the-real-exam">Full-length practice · Weeks 1–5 · same format as the real exam</h2>
+<p><strong>Student handout · 100 points · about 108 minutes.</strong>
+This practice exam uses the <strong>same structure, question types and point values</strong>
+as the real midterm, but with different scenarios and numbers. Take it under
+exam conditions: printed/offline notes only, no internet, AI or live commands.
+Attempt every part, then compare with the
+<a href="practice-exam-answer-key.html">worked answers</a>. All values are synthetic
+teaching examples; this practice exam is not on the real exam.</p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Section</th><th style="text-align:right">Points</th><th style="text-align:right">Suggested minutes</th></tr></thead><tbody><tr><td><strong>A — Practical foundations</strong> (4 questions, 20 multiple-choice items)</td><td style="text-align:right">20</td><td style="text-align:right">20</td></tr><tr><td><strong>B — Application scenarios</strong> (3 questions, four 5-point parts each)</td><td style="text-align:right">60</td><td style="text-align:right">66</td></tr><tr><td><strong>C — CDN and server-side caching architecture</strong> (1 question)</td><td style="text-align:right">20</td><td style="text-align:right">22</td></tr><tr><td><strong>Total</strong></td><td style="text-align:right"><strong>100</strong></td><td style="text-align:right"><strong>108</strong></td></tr></tbody></table></div>
+<p>Aim to start B at minute 20 and C at minute 86. In Sections B and C, bullets,
+short explanations and annotated arithmetic are welcome. You do not need to
+write a complete program, and memorized header spellings or tool commands are
+not graded.</p>
+<hr>
+<h1 id="section-a--practical-foundations">SECTION A — Practical foundations</h1>
+<p><strong>20 points · about 20 minutes · 20 multiple-choice items, 1 point each</strong></p>
+<p>Choose the <strong>single best answer</strong> for every item. There is no penalty for a
+wrong answer, so do not leave any blank.</p>
+<h3 id="a1-5-points--from-a-url-to-a-usable-page">A1 (5 points) — From a URL to a usable page</h3>
+<p>A student types <code>https://library.example.edu:8443/rooms</code> into a browser.</p>
+<p><strong>A1.1</strong> Which step finds the IP address for <code>library.example.edu</code>?</p>
+<ul>
+<li>(a) TLS</li>
+<li>(b) DNS</li>
+<li>(c) HTTP</li>
+<li>(d) Browser rendering</li>
+</ul>
+<p><strong>A1.2</strong> Which step checks the server&#39;s certificate before page data is exchanged?</p>
+<ul>
+<li>(a) DNS</li>
+<li>(b) The TCP/QUIC transport connection</li>
+<li>(c) TLS</li>
+<li>(d) Browser rendering</li>
+</ul>
+<p><strong>A1.3</strong> What does <code>:8443</code> in the URL identify?</p>
+<ul>
+<li>(a) The port, which selects the service on the server machine to talk to</li>
+<li>(b) The subnet mask</li>
+<li>(c) The DNS record type</li>
+<li>(d) The page the user may see</li>
+</ul>
+<p><strong>A1.4</strong> A live video call prefers lower delay and can tolerate an occasional lost packet. Which transport style fits best?</p>
+<ul>
+<li>(a) TCP, because it retransmits every lost packet before delivering later data</li>
+<li>(b) TLS, because it hides the address</li>
+<li>(c) DHCP, because it assigns addresses</li>
+<li>(d) UDP-style delivery (as QUIC and real-time media use), which does not hold everything for one lost packet</li>
+</ul>
+<p><strong>A1.5</strong> A laptop at <code>10.0.0.12</code> (private) loads a public website. What does the home or campus gateway do?</p>
+<ul>
+<li>(a) Gives the laptop a public DNS name</li>
+<li>(b) Translates (NAT) the private address to a public one and routes the traffic</li>
+<li>(c) Replaces TLS</li>
+<li>(d) Stores the website&#39;s pages permanently</li>
+</ul>
+<h3 id="a2-5-points--connecting-a-domain-to-an-application">A2 (5 points) — Connecting a domain to an application</h3>
+<p>You own <code>club.example.edu</code>. The host gives you the IPv4 address <code>203.0.113.10</code>.
+You also want <code>www.club.example.edu</code> to follow whatever <code>club.example.edu</code>
+points to, and the host asks you to publish the text <code>site-check=789</code>.</p>
+<p><strong>A2.1</strong> Which record points <code>club.example.edu</code> at the IPv4 address <code>203.0.113.10</code>?</p>
+<ul>
+<li>(a) CNAME</li>
+<li>(b) TXT</li>
+<li>(c) A</li>
+<li>(d) MX</li>
+</ul>
+<p><strong>A2.2</strong> Which record makes <code>www.club.example.edu</code> an alias of <code>club.example.edu</code>?</p>
+<ul>
+<li>(a) A</li>
+<li>(b) CNAME</li>
+<li>(c) NS</li>
+<li>(d) TXT</li>
+</ul>
+<p><strong>A2.3</strong> The A record has a TTL of 3600. What does that mean?</p>
+<ul>
+<li>(a) The record is deleted after 3600 visits</li>
+<li>(b) Resolvers may keep the answer for up to one hour before asking again</li>
+<li>(c) The server is guaranteed to respond in 3600 ms</li>
+<li>(d) The certificate lasts 3600 seconds</li>
+</ul>
+<p><strong>A2.4</strong> Which servers hold the official (authoritative) answer for the zone?</p>
+<ul>
+<li>(a) The visitor&#39;s browser</li>
+<li>(b) The visitor&#39;s recursive resolver</li>
+<li>(c) The name servers of the DNS host for the domain</li>
+<li>(d) Any CDN edge server</li>
+</ul>
+<p><strong>A2.5</strong> You change the A record, but one student still reaches the old host an hour later. What is the most likely normal reason?</p>
+<ul>
+<li>(a) A resolver or device is still using the old cached answer until its TTL expires</li>
+<li>(b) DNS cannot be changed once published</li>
+<li>(c) TLS blocks new addresses</li>
+<li>(d) The registrar must restart the browser</li>
+</ul>
+<h3 id="a3-5-points--react-lists-and-state">A3 (5 points) — React lists and state</h3>
+<p>A <code>TodoApp</code> keeps <code>const [items, setItems] = useState&lt;Item[]&gt;([])</code>. It renders a
+list of <code>&lt;TodoRow /&gt;</code> components, an add form, and a footer showing how many items are done.</p>
+<p><strong>A3.1</strong> Which update adds <code>newItem</code> correctly?</p>
+<ul>
+<li>(a) <code>items.push(newItem); setItems(items);</code></li>
+<li>(b) <code>setItems([...items, newItem]);</code></li>
+<li>(c) <code>items = [...items, newItem];</code></li>
+<li>(d) <code>setItems(items.length);</code></li>
+</ul>
+<p><strong>A3.2</strong> Why give each <code>&lt;TodoRow /&gt;</code> a stable <code>key</code>?</p>
+<ul>
+<li>(a) To make the row clickable</li>
+<li>(b) To style the row</li>
+<li>(c) So React can match rows between renders (for example after a reorder or delete)</li>
+<li>(d) To send the row to the server</li>
+</ul>
+<p><strong>A3.3</strong> The add form and the footer (siblings) both need <code>items</code>. Where should the state live?</p>
+<ul>
+<li>(a) In their nearest common parent, passed down as props</li>
+<li>(b) Duplicated in each sibling</li>
+<li>(c) In a global variable outside React</li>
+<li>(d) In the browser URL only</li>
+</ul>
+<p><strong>A3.4</strong> The footer needs the number of done items. What is the simplest correct approach?</p>
+<ul>
+<li>(a) Store <code>doneCount</code> in a second state and update it with an effect</li>
+<li>(b) Calculate it during render from <code>items</code></li>
+<li>(c) Fetch it from the server on every keystroke</li>
+<li>(d) Mutate the DOM text directly</li>
+</ul>
+<p><strong>A3.5</strong> An effect starts <code>setInterval(refresh, 5000)</code>. What must the effect return so the timer does not keep running after unmount?</p>
+<ul>
+<li>(a) Nothing</li>
+<li>(b) The interval id as a string</li>
+<li>(c) A cleanup function that calls <code>clearInterval</code></li>
+<li>(d) A second <code>useEffect</code></li>
+</ul>
+<h3 id="a4-5-points--http-https-cors-and-axios">A4 (5 points) — HTTP, HTTPS, CORS and axios</h3>
+<p>A browser app at <code>https://clubs.example</code> calls an API at <code>https://api.clubs.example</code>.</p>
+<p><strong>A4.1</strong> Which status fits a <code>POST</code> that successfully created a new resource?</p>
+<ul>
+<li>(a) 200 with no body</li>
+<li>(b) 201 Created</li>
+<li>(c) 301 Moved</li>
+<li>(d) 404 Not Found</li>
+</ul>
+<p><strong>A4.2</strong> Which status means the requested item does not exist?</p>
+<ul>
+<li>(a) 401</li>
+<li>(b) 403</li>
+<li>(c) 404</li>
+<li>(d) 500</li>
+</ul>
+<p><strong>A4.3</strong> Which is <strong>not</strong> part of a normal certificate check?</p>
+<ul>
+<li>(a) The name matches the site</li>
+<li>(b) The dates are valid</li>
+<li>(c) The chain leads to a trusted issuer</li>
+<li>(d) The server&#39;s response time is under 100 ms</li>
+</ul>
+<p><strong>A4.4</strong> Who enforces the CORS rule that blocks a cross-origin request?</p>
+<ul>
+<li>(a) The browser</li>
+<li>(b) <code>curl</code></li>
+<li>(c) The DNS server</li>
+<li>(d) The database</li>
+</ul>
+<p><strong>A4.5</strong> An axios request times out and no response arrives. What should the UI do?</p>
+<ul>
+<li>(a) Show a field error from the server&#39;s 400 body</li>
+<li>(b) Show a &quot;network problem, try again&quot; style message, not a validation message</li>
+<li>(c) Show nothing and assume success</li>
+<li>(d) Log the user out</li>
+</ul>
+<hr>
+<h1 id="section-b--application-scenarios">SECTION B — Application scenarios</h1>
+<p><strong>60 points · about 66 minutes · three scenarios, 20 points each (four parts of 5 points)</strong></p>
+<h2 id="b1-20-points--share-a-local-demo-and-move-its-public-address">B1 (20 points) — Share a local demo and move its public address</h2>
+<p>Your laptop has private address <code>172.16.5.30/24</code>, supplied by DHCP.
+Your development server listens only on <code>127.0.0.1:4000</code>.
+A teammate on the same permitted LAN tries <code>http://172.16.5.30:4000</code>.
+Later, you move your public site to a new host. Its old DNS address record has
+a TTL of 7200 seconds.</p>
+<p><strong>B1a (5 points).</strong></p>
+<ul>
+<li>Explain why the teammate cannot use your loopback-only server.</li>
+<li>Describe a safe change for this authorized LAN demo (do not expose it to the public Internet or disable the firewall).</li>
+<li>State the address the teammate should use.</li>
+<li>Give one check that shows it worked.</li>
+</ul>
+<p><strong>B1b (5 points).</strong></p>
+<ul>
+<li>Explain what DHCP supplies.</li>
+<li>Explain what <code>/24</code> means when deciding whether another address is on the same subnet.</li>
+<li>Explain why a friend outside your network cannot use this private address directly.</li>
+<li>Distinguish the gateway&#39;s routing/NAT role from DHCP.</li>
+</ul>
+<p><strong>B1c (5 points).</strong></p>
+<ul>
+<li>Say what to record before the DNS move so you can roll back.</li>
+<li>Say when to lower the TTL and how long to wait before changing the address.</li>
+<li>Explain why lowering the TTL at the moment of the move cannot immediately update every user&#39;s answer.</li>
+<li>Say when it is safe to retire the old host.</li>
+</ul>
+<p><strong>B1d (5 points).</strong></p>
+<p>Two users see different addresses just after the move.</p>
+<ul>
+<li>Give a normal caching reason.</li>
+<li>Say which kind of DNS server (recursive resolver or authoritative) holds the cached answer.</li>
+<li>Describe one practical check before claiming the new application is ready.</li>
+</ul>
+<h2 id="b2-20-points--filter-count-and-load-rooms-in-react">B2 (20 points) — Filter, count and load rooms in React</h2>
+<p>A React page shows study rooms. Capacity is the number of seats; <strong>blank
+capacity means unknown</strong>, while <code>0</code> means a known capacity of zero.</p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>ID</th><th>Building</th><th>Status</th><th style="text-align:right">Capacity</th></tr></thead><tbody><tr><td>R1</td><td>Science</td><td>available</td><td style="text-align:right">12</td></tr><tr><td>R2</td><td>Science</td><td>available</td><td style="text-align:right">blank</td></tr><tr><td>R3</td><td>Arts</td><td>available</td><td style="text-align:right">0</td></tr><tr><td>R4</td><td>Science</td><td>booked</td><td style="text-align:right">30</td></tr><tr><td>R5</td><td>Science</td><td>available</td><td style="text-align:right">8</td></tr></tbody></table></div>
+<p>The user selects building <strong>Science</strong> and status <strong>available</strong>. The page shows
+a summary (matching rooms, total known capacity, rooms with unknown capacity)
+and a list of the matches, <strong>two rooms per page</strong>, sorted by ID. The summary
+counts all matches, not only the rooms on the current page.</p>
+<p><strong>B2a (5 points).</strong></p>
+<p>For the table above and the selection Science + available:</p>
+<ul>
+<li>Give the IDs of the matching rooms and how many there are.</li>
+<li>Give the total known capacity.</li>
+<li>Give the number of matching rooms with unknown capacity.</li>
+<li>Say which room IDs appear on page 1 and which on page 2.</li>
+<li>List, in order, these four steps: filter, sort, calculate summary, take the current page.</li>
+</ul>
+<p><strong>B2b (5 points).</strong></p>
+<p>A button handler runs this code when <code>score</code> is 0:</p>
+<pre><code class="language-tsx">setScore(score + 10);
+setScore(score + 10);
+</code></pre>
+<ul>
+<li>What value does <code>score</code> show after the next render?</li>
+<li>Explain in one sentence why.</li>
+<li>Rewrite the two lines so the score goes up by 20.</li>
+</ul>
+<p><strong>B2c (5 points).</strong></p>
+<p>A page fetches the selected building&#39;s rooms inside <code>useEffect</code>. Here is the
+effect with three possible dependency arrays (<code>building</code> is state the user can change):</p>
+<pre><code class="language-tsx">useEffect(() =&gt; { loadRooms(building); }, [building]);   // Version 1
+useEffect(() =&gt; { loadRooms(building); }, []);           // Version 2
+useEffect(() =&gt; { loadRooms(building); });               // Version 3 (no array)
+</code></pre>
+<ul>
+<li>When does <code>loadRooms</code> run in Version 1?</li>
+<li>When does it run in Version 2, and what is wrong with the page after the user changes the building?</li>
+<li>When does it run in Version 3, and what problem happens if <code>loadRooms</code> also sets state?</li>
+<li>Which version should the page use, and why?</li>
+</ul>
+<p><strong>B2d (5 points).</strong></p>
+<p>The page reads saved JSON from the server and does <code>as Room[]</code>.</p>
+<ul>
+<li>Why does this cast not make the data safe at runtime, even though TypeScript compiles?</li>
+<li>What should the code do with a row that has a blank ID or status <code>maintenance</code> (allowed values are <code>available</code> and <code>booked</code>)?</li>
+<li>What should the code do with blank capacity, and with capacity <code>0</code>?</li>
+<li>Give one test that confirms <code>0</code> capacity is counted but blank capacity is not.</li>
+</ul>
+<h2 id="b3-20-points--connect-a-browser-form-to-an-api-safely">B3 (20 points) — Connect a browser form to an API safely</h2>
+<p>A React form served from <code>https://clubs.example</code> sends a <strong>POST</strong> with a JSON
+body (<code>Content-Type: application/json</code>) and cookies (credentials included) to
+<code>https://api.clubs.example/api/events</code>. The API contract says: success returns
+status <strong>201</strong>, the created object, and a <strong>Location</strong> header; invalid input
+returns status <strong>400</strong> and a JSON error body with a <code>code</code>, a <code>message</code> and a
+list of field errors.</p>
+<p><strong>B3a (5 points).</strong></p>
+<ul>
+<li>Put these Express steps in the correct order: error handler, input validation, CORS/preflight handling, creating the event, JSON body parsing.</li>
+<li>State exactly what the API returns for valid input.</li>
+<li>State exactly what the API returns for invalid input.</li>
+<li>Explain why the server must validate even though the React form already does.</li>
+</ul>
+<p><strong>B3b (5 points).</strong></p>
+<p>The browser blocks the request, but the same request with <code>curl</code> works.</p>
+<ul>
+<li>Why does the browser block it when <code>curl</code> does not?</li>
+<li>What exact value must <code>Access-Control-Allow-Origin</code> have (it cannot be <code>*</code> here), and which other header is needed because cookies are sent?</li>
+<li>Which method and which request header must be allowed?</li>
+<li>Which header must be exposed so JavaScript can read <code>Location</code>?</li>
+<li>In one sentence, explain why passing CORS does not mean the user is logged in or authorized.</li>
+</ul>
+<p><strong>B3c (5 points).</strong></p>
+<ul>
+<li>Name two things a shared axios client should hold so each component does not repeat them.</li>
+<li>Say what the UI should show for a 400 response with field errors.</li>
+<li>Say what the UI should show for a network failure or timeout.</li>
+<li>Say what the UI should show for a request the user cancelled on purpose, and why it should differ from the 400 message.</li>
+</ul>
+<p><strong>B3d (5 points).</strong></p>
+<p>Before releasing the API at <code>https://api.clubs.example</code>, you check its HTTPS certificate.</p>
+<ul>
+<li>Name the three things to check (name match, dates, chain).</li>
+<li>Name one safeguard so the certificate does not expire unnoticed.</li>
+<li>Name one check after deployment and one rollback step.</li>
+<li>A teammate proposes turning off certificate verification to make an error go away. Give one reason this is not a fix.</li>
+</ul>
+<hr>
+<h1 id="section-c--cdn-and-server-side-caching-architecture">SECTION C — CDN and server-side caching architecture</h1>
+<p><strong>20 points · about 22 minutes · four parts, 5 points each</strong></p>
+<h2 id="c1-20-points--lecturehub-goes-global">C1 (20 points) — LectureHub goes global</h2>
+<p>LectureHub (React frontend, Express API with a Redis cache, MySQL) runs from
+one origin in Oregon. The college adds recorded and live-streamed lectures, and
+a student in Singapore can now use the site. The team puts the app behind a CDN.
+A request from Singapore to the Oregon origin has a minimum <strong>round-trip time
+of 140 ms</strong> (light in fibre travels about 200,000 km/s and the distance is about
+14,000 km). The pages and endpoints involved are:</p>
+<ul>
+<li><code>app-9f2c1.js</code> — the hashed Vite bundle</li>
+<li><code>index.html</code> — the SPA shell that points to the current bundle</li>
+<li><code>/api/schedule</code> — public, the same for everyone; the registrar has agreed it
+may be up to <strong>30 seconds</strong> old</li>
+<li><code>/profile</code> and <code>/api/me</code> — personalized, require sign-in</li>
+<li>The lecture video: encoded <strong>segments</strong> and a <strong>manifest</strong> listing them</li>
+</ul>
+<p><strong>C1a (5 points) — Distance and the edge.</strong></p>
+<ul>
+<li>A page load needs DNS, TCP, TLS and the HTML request. Using the 140 ms round-trip time, what is the minimum time spent on those round trips? Circle one.<ul>
+<li>(a) 140 ms</li>
+<li>(b) 280 ms</li>
+<li>(c) 420 ms</li>
+<li>(d) 560 ms</li>
+</ul>
+</li>
+<li>Explain why a CDN helps even for responses that are <strong>never</strong> cached. Compare a TLS handshake of 2 round trips to an origin 140 ms away with one to a point of presence (PoP) 8 ms away.</li>
+<li>Name the two ways a request finds a nearby PoP.</li>
+<li>A teammate says “it&#39;s cached in Tokyo, so Mumbai will be fast too.” Correct them in one sentence.</li>
+</ul>
+<p><strong>C1b (5 points) — The streaming split.</strong></p>
+<ul>
+<li>Sort each of these into <strong>control plane</strong> or <strong>data plane</strong>:<ul>
+<li>the “Resume lecture” list</li>
+<li>a video segment</li>
+<li>the license/DRM key for a user</li>
+<li>the lecture catalog search</li>
+<li>the manifest of a <em>finished</em> lecture</li>
+</ul>
+</li>
+<li>Explain how adaptive bitrate uses the ladder of segment versions when a viewer&#39;s network slows down.</li>
+<li>For the <em>live</em> stream, say which gets the shorter TTL, the manifest or the segments, and why.</li>
+<li>Name one benefit of a cache placed inside an ISP (Open Connect style) and one reason to use several CDNs.</li>
+</ul>
+<p><strong>C1c (5 points) — Who else would get this copy?</strong></p>
+<p>A “cache everything” rule is added at the edge. It stores each response under
+its <strong>cache key</strong>, which is roughly the host, path and query. Priya loads
+<code>/profile</code> while signed in. Fifteen seconds later Tom requests <code>/profile</code> and
+sees Priya&#39;s page. Choose the single best answer for each item (1 point each).</p>
+<ul>
+<li>What is the cache key for the two <code>/profile</code> requests, and why did Tom get Priya&#39;s copy?<ul>
+<li>(a) The key includes the cookie, so Tom&#39;s cookie matched Priya&#39;s</li>
+<li>(b) The key is the time of the request, which fell within 15 seconds</li>
+<li>(c) The key is roughly host + path + query, which is the same for both users, so the stored copy matched Tom&#39;s request</li>
+<li>(d) The key is the user&#39;s IP address, which happened to match</li>
+</ul>
+</li>
+<li>Which pair of mistakes, by different people, combined to cause this?<ul>
+<li>(a) The database returned the wrong row, and Redis was down</li>
+<li>(b) The origin allowed the personalized page to be shared, and an edge “cache everything” rule ignored who was asking</li>
+<li>(c) The browser ignored the cookie, and TLS expired</li>
+<li>(d) The CDN had no PoP in the region, and DNS TTL was too long</li>
+</ul>
+</li>
+<li>A shared CDN cache may store which of these?<ul>
+<li>(a) <code>/profile</code> and <code>/api/schedule</code>, but not video segments</li>
+<li>(b) Only <code>/profile</code></li>
+<li>(c) A video segment and <code>/api/schedule</code>, but not <code>/profile</code></li>
+<li>(d) None of them</li>
+</ul>
+</li>
+<li>Which automated check would best detect this problem?<ul>
+<li>(a) A synthetic signed-in request that raises an alert if it ever gets a cache HIT</li>
+<li>(b) A ping to the origin every minute</li>
+<li>(c) A check that the TLS certificate has not expired</li>
+<li>(d) A check that the CDN has at least 300 PoPs</li>
+</ul>
+</li>
+<li>A teammate suggests adding the user-agent to the cache key to be safe. Why is that a poor choice?<ul>
+<li>(a) It makes the cache key too short</li>
+<li>(b) It makes many variants, destroys the hit rate, and still does not identify the user</li>
+<li>(c) It would stop video segments from being cached at all</li>
+<li>(d) It forces every request to go to the shield</li>
+</ul>
+</li>
+</ul>
+<p><strong>C1d (5 points) — Caching inside the application.</strong></p>
+<p>LectureHub&#39;s Express API uses a <code>cached()</code> helper: it looks in Redis; on a miss
+it runs the database query, stores the result with a <strong>TTL</strong>, and returns it.
+Choose the single best answer for each item (1 point each).</p>
+<ul>
+<li>What is this pattern called?<ul>
+<li>(a) Write-through</li>
+<li>(b) Service worker</li>
+<li>(c) Cache-aside</li>
+<li>(d) Anycast</li>
+</ul>
+</li>
+<li>Which layer of the caching stack is this helper?<ul>
+<li>(a) Browser HTTP cache</li>
+<li>(b) CDN / edge</li>
+<li>(c) Database cache</li>
+<li>(d) App cache (Redis or in-memory)</li>
+</ul>
+</li>
+<li>Thirty requests miss at the same moment. What does the <code>inflight</code> map do?<ul>
+<li>(a) It lets one request run the query while the others wait and share the result</li>
+<li>(b) It makes all thirty run the query in parallel</li>
+<li>(c) It deletes the cached value</li>
+<li>(d) It sends the requests to different PoPs</li>
+</ul>
+</li>
+<li>The hot <code>/api/schedule</code> key expires and 3,000 requests arrive in the same second. Besides coalescing, which is a standard defence against this stampede?<ul>
+<li>(a) Purging the entire cache at the same time every day</li>
+<li>(b) Turning off the TTL permanently</li>
+<li>(c) Serving stale data while one request refreshes, or adding jitter to TTLs</li>
+<li>(d) Adding more browser tabs</li>
+</ul>
+</li>
+<li>An instructor posts a schedule change with <code>POST /api/schedule</code>. What should the server do so users see fresh data?<ul>
+<li>(a) Delete the affected cache keys, so the next read is a MISS and loads fresh data</li>
+<li>(b) Nothing; wait for every cache to expire</li>
+<li>(c) Restart the CDN</li>
+<li>(d) Disable TLS</li>
+</ul>
+</li>
+</ul>
+<hr>
+<p><strong>END OF PRACTICE EXAM</strong> — score yourself with the
+<a href="practice-exam-answer-key.html">worked answers</a>, then review the matching
+<a href="study-guide.html">study guide</a> sections for anything you missed.</p>
+
+</main>
+<footer>Individual coursework. D2L contains dated deadlines, submissions and private course access.</footer>
+</body>
+</html>
